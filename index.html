@@ -56,6 +56,8 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 .sheet input{flex:1;min-width:0;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
 .row2{display:flex;gap:8px;justify-content:center}
 #fillT{background:#f28c1b;color:#1d1d1f;border:2px solid #b8650a;border-radius:999px;padding:7px 16px;font-size:14px;font-weight:700}
+#storebtn{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
+.sheet h3{margin:10px 0 4px;font-size:15px}.sc{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin-bottom:6px}.sc .lvt{flex:1;min-width:0}.sc button{flex:none;padding:8px 12px}.wgrid{display:flex;flex-wrap:wrap;gap:8px}.wbtn{padding:2px;border-radius:12px;line-height:0}.wbtn.sel{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}.stcv{width:56px;height:56px}#stprev .stcv{width:110px;height:110px}
 #lvbtn{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
 #curlv{color:#fff;opacity:.9;font-size:14px;margin:0}
 #curlv:empty{display:none}
@@ -99,7 +101,7 @@ body.noipa .ip{display:none}
     </div>
     <button class="pri" id="start">▶ PLAY</button>
     <p id="curlv"></p>
-    <div class="row2"><button id="edit">✎ My words</button><button id="lvbtn">★ Levels</button></div>
+    <div class="row2"><button id="edit">✎ My words</button><button id="lvbtn">★ Levels</button><button id="storebtn">🛒 Store</button></div>
     <button id="fillT" class="hidden">✨ Fill in</button>
     <p id="sync">…</p>
     <p id="audst"></p>
@@ -117,6 +119,15 @@ body.noipa .ip{display:none}
   <p class="hint" id="fillmsg"></p>
   <p class="hint" id="voice"></p>
   <p class="hint">Recorded audio: kheng.info clips and Bible words cut from the Khmer Audio Bible (℗ 2024 Davar Partners International; Khmer Standard Version © 2005 United Bible Societies, Bible Society in Cambodia; free to share, not for sale). Pronunciations: Google Khmer Lexicon (seanghay) in G2K notation. All via PeakSlab.</p>
+</div>
+
+<div id="store" class="sheet hidden">
+  <h2>🛒 Store · <span id="stpts"></span></h2>
+  <div id="stprev" style="display:flex;justify-content:center"></div>
+  <p class="hint">Finish a level 100% and you earn 1 point for every word in it. Spend points on colors. Own the gold color, then prestige for a new shape. You always keep your old colors and shapes.</p>
+  <div id="stshop"></div>
+  <div id="stwar"></div>
+  <div class="row"><button id="stdone" class="pri" style="margin-left:auto">Close</button></div>
 </div>
 
 <div id="levels" class="sheet hidden">
@@ -422,7 +433,8 @@ function die(t){
 function win(){
   mode='dead';fail='';
   const lvl=LV.find(x=>x.id===curLv);if(lvl){lvl.done=(lvl.done||0)+1;lvl.best=lvl.best?Math.min(lvl.best,att):att;lvl.prog=100;lvWrite()}$('q').textContent='🎉 Level complete!';$('opts').innerHTML='';
-  msgBtn('All '+run.length+' words in '+att+' attempt'+(att>1?'s':'')+'!','Play again',()=>{att=0;begin()});draw();
+  const earn=run.length;S.earned=(S.earned||0)+earn;saveStore();
+  msgBtn('All '+run.length+' words in '+att+' attempt'+(att>1?'s':'')+'! +'+earn+' points ⭐','Play again',()=>{att=0;begin()});draw();
 }
 function floorAt(x,os){
   let f=0;
@@ -534,12 +546,10 @@ function draw(){
   for(const p of parts){
     const a=p.l/p.m;
     if(p.k){ctx.fillStyle='rgba(235,225,205,'+(a*.7)+')';ctx.beginPath();ctx.arc(sx(p.x),GY-p.y,2+3*a,0,7);ctx.fill()}
-    else{ctx.fillStyle='rgba(242,140,27,'+(a*.45)+')';const z=B*.55*a;ctx.fillRect(sx(p.x)-z/2,GY-p.y-B/2-z/2,z,z)}
+    else{const tcol=hexRgb(colorOf(S.eqC).c);ctx.fillStyle='rgba('+tcol[0]+','+tcol[1]+','+tcol[2]+','+(a*.45)+')';const z=B*.55*a;ctx.fillRect(sx(p.x)-z/2,GY-p.y-B/2-z/2,z,z)}
   }
   ctx.save();ctx.translate(BX,GY-y-B/2);ctx.rotate(rot);
-  ctx.fillStyle=mode==='dead'&&fail?'#c0392b':'#f28c1b';ctx.fillRect(-B/2,-B/2,B,B);
-  ctx.strokeStyle='#1d1d1f';ctx.lineWidth=3;ctx.strokeRect(-B/2,-B/2,B,B);
-  ctx.fillStyle='#1d1d1f';ctx.fillRect(2,-9,6,7);ctx.fillRect(-10,-9,6,7);ctx.lineWidth=2;ctx.beginPath();ctx.arc(-1,3,7,.2*Math.PI,.8*Math.PI);ctx.stroke();
+  drawBlock(ctx,B,S.eqS,colorOf(S.eqC),tm,mode==='dead'&&!!fail);
   ctx.restore();
   if(run.length&&obs.length){
     const done=Math.max(0,Math.min(1,d/(obs[obs.length-1].x1+B+240)));
@@ -552,10 +562,113 @@ function draw(){
   ctx.restore();
 }
 
+// ---- store, points, skins, prestige ----
+var SHAPES=['square','circle','diamond','star'],SHAPE_NAMES={square:'Square',circle:'Circle',diamond:'Diamond',star:'Star'};
+var BASECOL={id:'orange',name:'Classic Orange',c:'#f28c1b'};
+var COSTS=[50,100,150,1000];
+var TIERS=[
+ [{id:'a1',name:'Sky Blue',c:'#3aa0ff'},{id:'a2',name:'Leaf Green',c:'#3ccf6a'},{id:'a3',name:'Royal Purple',c:'#9b5de5'},{id:'a4',name:'Shiny Gold',c:'#f5b301',hi:'#fff4b0',lo:'#b9770e',shine:1}],
+ [{id:'b1',name:'Teal',c:'#14b8a6'},{id:'b2',name:'Ruby Red',c:'#ef4444'},{id:'b3',name:'Hot Pink',c:'#ec4899'},{id:'b4',name:'Shiny Silver',c:'#cbd5e1',hi:'#ffffff',lo:'#8392a6',shine:1}],
+ [{id:'c1',name:'Lime',c:'#a3e635'},{id:'c2',name:'Indigo',c:'#6366f1'},{id:'c3',name:'Coral',c:'#fb7185'},{id:'c4',name:'Shiny Rainbow',c:'#ff5a8a',rainbow:1,shine:1}]
+];
+var MAXP=3;
+var S={earned:0,spent:0,owned:{},prestige:0,eqC:'orange',eqS:'square'};
+try{const r=JSON.parse(localStorage.getItem('khmerStore')||'null');if(r&&typeof r==='object')S=Object.assign(S,r,{owned:Object.assign({},r.owned||{})})}catch(e){}
+function colorOf(id){if(id==='orange')return BASECOL;for(const t of TIERS)for(const c of t)if(c.id===id)return c;return BASECOL}
+function ownedColors(){const a=[BASECOL];for(const t of TIERS)for(const c of t)if(S.owned[c.id])a.push(c);return a}
+function ownedShapes(){return SHAPES.slice(0,Math.min(S.prestige,SHAPES.length-1)+1)}
+function pts(){return Math.max(0,(S.earned||0)-(S.spent||0))}
+function saveStore(){try{localStorage.setItem('khmerStore',JSON.stringify(S))}catch(e){}stLabel();try{cloudPush()}catch(e){}}
+function stLabel(){const b=$('storebtn');if(b)b.textContent='🛒 Store ('+pts()+' pts)'}
+function blockPath(c,s,shape){
+  const h=s/2;c.beginPath();
+  if(shape==='circle'){c.arc(0,0,h*1.04,0,7)}
+  else if(shape==='diamond'){const r=h*1.38;c.moveTo(0,-r);c.lineTo(r,0);c.lineTo(0,r);c.lineTo(-r,0);c.closePath()}
+  else if(shape==='star'){const R=h*1.45,r=h*.72;for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,q=i%2?r:R,x=Math.cos(a)*q,y=Math.sin(a)*q;i?c.lineTo(x,y):c.moveTo(x,y)}c.closePath()}
+  else c.rect(-h,-h,s,s);
+}
+function drawBlock(c,s,shape,col,t,dead){
+  const h=s/2,k=s/36;
+  blockPath(c,s,shape);
+  if(dead)c.fillStyle='#c0392b';
+  else if(col.rainbow){const g=c.createLinearGradient(-h,-h,h,h);['#ff4d4d','#ffd54a','#4dde6a','#4dc3ff','#a05cff','#ff4dd2'].forEach((q,i,a)=>g.addColorStop(i/(a.length-1),q));c.fillStyle=g}
+  else if(col.shine){const g=c.createLinearGradient(-h,-h,h,h);g.addColorStop(0,col.hi);g.addColorStop(.5,col.c);g.addColorStop(1,col.lo);c.fillStyle=g}
+  else c.fillStyle=col.c;
+  c.fill();
+  if(col.shine&&!dead){c.save();c.clip();c.rotate(.6);const off=((t||0)*s*1.6%(s*3))-s*1.5;c.fillStyle='rgba(255,255,255,.5)';c.fillRect(off,-s*2,s*.26,s*4);c.fillRect(off+s*.36,-s*2,s*.08,s*4);c.restore()}
+  c.strokeStyle='#1d1d1f';c.lineWidth=3*k;c.lineJoin='round';c.stroke();
+  c.fillStyle='#1d1d1f';c.fillRect(2*k,-9*k,6*k,7*k);c.fillRect(-10*k,-9*k,6*k,7*k);
+  c.lineWidth=2*k;c.beginPath();c.arc(-1*k,3*k,7*k,.2*Math.PI,.8*Math.PI);c.stroke();
+}
+function hexRgb(h){const n=parseInt(h.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255]}
+// --- store screen
+var stPrev=[],stRaf=0;
+function stCanvas(shape,col,sz){const cv=document.createElement('canvas');cv.width=cv.height=sz||64;cv.className='stcv';stPrev.push({cv,shape,col});return cv}
+function stPaint(){
+  const t=performance.now()/1000;
+  for(const p of stPrev){if(!p.cv.isConnected)continue;const c=p.cv.getContext('2d'),w=p.cv.width;c.clearRect(0,0,w,w);c.save();c.translate(w/2,w/2+1);c.scale(w/64*.78,w/64*.78);drawBlock(c,36,p.shape,p.col,t,false);c.restore()}
+  if(!$('store').classList.contains('hidden'))stRaf=requestAnimationFrame(stPaint);else stRaf=0;
+}
+function stEl(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e}
+function stRender(){
+  stPrev=[];$('stpts').textContent=pts()+' pts';
+  const shop=$('stshop');shop.textContent='';
+  // colour shop (current tier)
+  const tier=TIERS[S.prestige];
+  if(tier){
+    shop.appendChild(stEl('h3','','New colors'+(S.prestige?' · set '+(S.prestige+1):'')));
+    let nextFound=false;
+    tier.forEach((col,i)=>{
+      const cost=COSTS[i],owned=!!S.owned[col.id],card=stEl('div','sc');
+      card.appendChild(stCanvas(S.eqS,col,56));
+      const t=stEl('div','lvt');t.appendChild(stEl('b','',col.name));t.appendChild(document.createElement('br'));
+      t.appendChild(stEl('span','hint',owned?'Owned ✓':cost+' points'));card.appendChild(t);
+      if(!owned){
+        const isNext=!nextFound;nextFound=true;
+        const b=stEl('button',isNext&&pts()>=cost?'pri':'',isNext?(pts()>=cost?'Buy':'Need '+(cost-pts())+' more'):'🔒');
+        b.disabled=!isNext||pts()<cost;
+        b.onclick=()=>{if(pts()<cost)return;S.spent+=cost;S.owned[col.id]=1;S.eqC=col.id;saveStore();stRender()};
+        card.appendChild(b);
+      }
+      shop.appendChild(card);
+    });
+  }else shop.appendChild(stEl('p','hint','You have unlocked every shape and color. 🎉'));
+  // prestige
+  if(S.prestige<MAXP){
+    const top=TIERS[S.prestige]&&TIERS[S.prestige][3];
+    if(top&&S.owned[top.id]){
+      const ns=SHAPES[S.prestige+1],card=stEl('div','sc');
+      card.appendChild(stCanvas(ns,colorOf(S.eqC),56));
+      const t=stEl('div','lvt');t.appendChild(stEl('b','','✨ Prestige available!'));t.appendChild(document.createElement('br'));
+      t.appendChild(stEl('span','hint','Unlock the '+SHAPE_NAMES[ns]+' shape'+(TIERS[S.prestige+1]?' and a new set of colors to buy':'')+'. You keep everything you own.'));card.appendChild(t);
+      const b=stEl('button','pri','Prestige');let armed=0;
+      b.onclick=()=>{if(!armed){armed=1;b.textContent='Tap again to confirm';setTimeout(()=>{armed=0;b.textContent='Prestige'},3000);return}
+        S.prestige++;S.eqS=SHAPES[S.prestige];saveStore();stRender()};
+      card.appendChild(b);shop.insertBefore(card,shop.firstChild);
+    }
+  }
+  // wardrobe
+  const war=$('stwar');war.textContent='';
+  war.appendChild(stEl('h3','','My colors'));
+  const g1=stEl('div','wgrid');
+  for(const col of ownedColors()){const b=stEl('button','wbtn'+(S.eqC===col.id?' sel':''));b.title=col.name;b.setAttribute('aria-label',col.name);b.appendChild(stCanvas(S.eqS,col,56));b.onclick=()=>{S.eqC=col.id;saveStore();stRender()};g1.appendChild(b)}
+  war.appendChild(g1);
+  war.appendChild(stEl('h3','','My shapes'));
+  const g2=stEl('div','wgrid');
+  for(const sh of ownedShapes()){const b=stEl('button','wbtn'+(S.eqS===sh?' sel':''));b.title=SHAPE_NAMES[sh];b.setAttribute('aria-label',SHAPE_NAMES[sh]);b.appendChild(stCanvas(sh,colorOf(S.eqC),56));b.onclick=()=>{S.eqS=sh;saveStore();stRender()};g2.appendChild(b)}
+  war.appendChild(g2);
+  // big preview
+  const pv=$('stprev');pv.textContent='';const big=stCanvas(S.eqS,colorOf(S.eqC),110);pv.appendChild(big);
+  if(!stRaf)stRaf=requestAnimationFrame(stPaint);
+}
+$('storebtn').onclick=()=>{$('store').classList.remove('hidden');stRender()};
+$('stdone').onclick=()=>{$('store').classList.add('hidden')};
+stLabel();
+
 // ---- account sync (claude.ai sign-in) ----
 var cloud={doc:null,ok:false,timer:0,busy:false,again:false};
 function syncMsg(t){const e=$('sync');if(e)e.textContent=t}
-function cloudPayload(){let w='';try{w=$('words').value}catch(e){}let ip='1';try{ip=showIpa?'1':'0'}catch(e){}return{words:w,levels:LV,ipa:ip,t:Date.now()}}
+function cloudPayload(){let w='';try{w=$('words').value}catch(e){}let ip='1';try{ip=showIpa?'1':'0'}catch(e){}return{words:w,levels:LV,ipa:ip,store:S,t:Date.now()}}
 function cloudPush(){if(!cloud.ok)return;clearTimeout(cloud.timer);syncMsg('☁ Saving…');cloud.timer=setTimeout(cloudFlush,1200)}
 async function cloudFlush(){
   if(cloud.busy){cloud.again=true;return}
@@ -588,6 +701,12 @@ async function cloudFlush(){
         LV=[...m.values()];try{localStorage.setItem('khmerLevels',JSON.stringify(LV))}catch(e){}
         lvLabel();try{lvRender()}catch(e){}
       }
+      if(d.store&&typeof d.store==='object'){
+        const r=d.store;S.earned=Math.max(S.earned||0,r.earned||0);S.spent=Math.max(S.spent||0,r.spent||0);
+        S.owned=Object.assign({},r.owned||{},S.owned||{});S.prestige=Math.max(S.prestige||0,r.prestige||0);
+        if(S.eqC==='orange'&&S.eqS==='square'){S.eqC=r.eqC||'orange';S.eqS=r.eqS||'square'}
+        try{localStorage.setItem('khmerStore',JSON.stringify(S))}catch(e){}stLabel()
+      }
       let local=null;try{local=localStorage.getItem('khmerWords')}catch(e){}
       if(typeof d.words==='string'&&d.words.trim()&&(!local||local===SAMPLE)){$('words').value=d.words;try{localStorage.setItem('khmerWords',d.words)}catch(e){}updCount()}
     }
@@ -609,8 +728,7 @@ function titleLoop(now){
   const off=pos%sp;let near=1e9;
   for(let x=-off+sp*.5;x<w+sp;x+=sp){tx.fillStyle='#e8e8ee';tx.strokeStyle='#1d1d1f';tx.lineWidth=3;tx.beginPath();tx.moveTo(x-20*s,gy);tx.lineTo(x,gy-44*s);tx.lineTo(x+20*s,gy);tx.closePath();tx.fill();tx.stroke();if(Math.abs(x-bx)<Math.abs(near))near=x-bx}
   const R=120*s,yy=Math.abs(near)<R?90*s*(1-(near/R)**2):0,rot=Math.abs(near)<R?Math.min(1,Math.max(0,(R-near)/(2*R)))*Math.PI/2:0;
-  tx.save();tx.translate(bx,gy-yy-bs/2);tx.rotate(rot);tx.fillStyle='#f28c1b';tx.fillRect(-bs/2,-bs/2,bs,bs);tx.strokeStyle='#1d1d1f';tx.lineWidth=3;tx.strokeRect(-bs/2,-bs/2,bs,bs);
-  tx.fillStyle='#1d1d1f';tx.fillRect(2*s,-9*s,6*s,8*s);tx.fillRect(-11*s,-9*s,6*s,8*s);tx.beginPath();tx.arc(-1*s,4*s,8*s,.2*Math.PI,.8*Math.PI);tx.stroke();tx.restore();
+  tx.save();tx.translate(bx,gy-yy-bs/2);tx.rotate(rot);drawBlock(tx,bs,S.eqS,colorOf(S.eqC),tt,false);tx.restore();
   requestAnimationFrame(titleLoop);
 }
 startTitle();
