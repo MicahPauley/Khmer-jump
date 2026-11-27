@@ -64,6 +64,7 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 #curlv:empty{display:none}
 #wc{position:absolute;top:calc(8px + env(safe-area-inset-top));left:calc(12px + env(safe-area-inset-left));z-index:2;color:#fff;opacity:.8;font-size:12px;font-weight:700;letter-spacing:.3px}
 #audst{color:#fff;opacity:.75;font-size:12px;margin:0}#audst:empty{display:none}
+#login{position:absolute;top:calc(6px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:14px;padding:5px 11px;font-size:12px;font-weight:700}
 #sync{color:#fff;opacity:.75;font-size:12px;margin:0}
 .lvlist{flex:1;min-height:80px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
 .lvcard{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
@@ -94,6 +95,7 @@ body.noipa .ip{display:none}
 <div id="menu" class="screen">
   <canvas id="tcv"></canvas>
   <div id="wc" title="Words learned"></div>
+  <button id="login" class="hidden">Sign in</button>
   <div class="title">
     <h1 class="logo">KHMER JUMP</h1>
     <p class="sub">ខ្មែរ · Learn words, dodge spikes</p>
@@ -732,13 +734,7 @@ async function cloudFlush(){
   $('done').addEventListener('click',cloudPush);
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&cloud.ok&&cloud.timer){clearTimeout(cloud.timer);cloudFlush()}});
 })();
-(async function cloudInit(){
-  syncMsg('☁ Signing in…');
-  try{
-    const user=await claude.use('user'),db=await claude.use('db');
-    const id=user?await user.id():null;
-    if(!db||!id){syncMsg('Not signed in to claude.ai — levels are saved on this device only');return}
-    const doc=db.doc('data/users/'+id+'/game');
+async function cloudStart(doc){
     const snap=await Promise.race([doc.get(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),10000))]);
     cloud.doc=doc;
     if(snap.exists){
@@ -761,6 +757,39 @@ async function cloudFlush(){
     }
     cloud.ok=true;
     await cloudFlush();
+}
+function fbSetup(){
+  const btn=$('login');let out=0;
+  function wire(){
+    const FB=window.FB;
+    if(!FB){syncMsg('Levels are saved on this device');return}
+    btn.classList.remove('hidden');
+    FB.onUser(async u=>{
+      cloud.ok=false;cloud.doc=null;btn.dataset.in=u?'1':'';
+      if(!u){btn.textContent='Sign in';syncMsg('Saved on this device — sign in to save to your account');return}
+      btn.textContent='☁ '+String(u.displayName||u.email||'Signed in').split(' ')[0];
+      syncMsg('☁ Loading your account…');
+      try{await cloudStart(FB.doc(u.uid))}catch(e){syncMsg('☁ Could not reach your account — kept on this device')}
+    });
+    btn.onclick=async()=>{
+      if(btn.dataset.in){
+        if(!out){out=1;const t=btn.textContent;btn.textContent='Tap again to sign out';setTimeout(()=>{out=0;if(btn.dataset.in)btn.textContent=t},3000);return}
+        out=0;try{await FB.signOut()}catch(e){}return;
+      }
+      try{syncMsg('Opening Google sign-in…');await FB.signIn()}catch(e){syncMsg('Sign-in did not finish ('+(e&&e.code||'error')+'). Try again.')}
+    };
+  }
+  if(window.FB)wire();else{addEventListener('fbready',wire,{once:true});setTimeout(()=>{if(!window.FB)syncMsg('Levels are saved on this device')},8000)}
+}
+(async function cloudInit(){
+  if(!window.claude){fbSetup();return}
+  syncMsg('☁ Signing in…');
+  try{
+    const user=await claude.use('user'),db=await claude.use('db');
+    const id=user?await user.id():null;
+    if(!db||!id){syncMsg('Not signed in to claude.ai — levels are saved on this device only');return}
+    const doc=db.doc('data/users/'+id+'/game');
+    await cloudStart(doc);
   }catch(e){syncMsg(window.claude?'Could not reach your account — levels are saved on this device only':'Levels are saved on this device')}
 })();
 // title screen animation
@@ -793,5 +822,21 @@ setTimeout(()=>{
 },300);
 </script>
 <script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import {getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import {getDatabase,ref,get,set} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+const app=initializeApp({apiKey:"AIzaSyB-3gm1nX0fK763kDkdt7Zto8UU7EfIUPA",authDomain:"khmer-jump.firebaseapp.com",databaseURL:"https://khmer-jump-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"khmer-jump",appId:"1:251686983357:web:f03501567d7e32f3a689d4"});
+const auth=getAuth(app),db=getDatabase(app);
+window.FB={
+  onUser:cb=>onAuthStateChanged(auth,cb),
+  async signIn(){const pr=new GoogleAuthProvider();try{await signInWithPopup(auth,pr)}catch(e){if(e&&(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'))await signInWithRedirect(auth,pr);else throw e}},
+  signOut:()=>signOut(auth),
+  doc:uid=>{const r=ref(db,'users/'+uid+'/game');return{
+    async get(){const sn=await get(r),v=sn.val();return{exists:!!(v&&v.json),data:()=>{try{return JSON.parse(v.json)}catch(e){return{}}}}},
+    async set(o){await set(r,{json:JSON.stringify(o),t:Date.now()})}}}
+};
+dispatchEvent(new Event('fbready'));
+</script>
 </body>
 </html>
