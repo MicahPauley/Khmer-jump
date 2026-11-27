@@ -130,6 +130,11 @@ body.noipa .ip{display:none}
   <p class="hint">Finish a level 100% and every new word in it counts as learned. Replaying a level never adds to your count. A new color unlocks at every 50 words, up to Shiny Diamond at 1,000. Then you can prestige (up to 10 times) for a new shape. The same 20 colors come back each prestige, so you can see how far along you are, and you keep everything you have unlocked. You always keep your old colors and shapes.</p>
   <div id="stshop"></div>
   <div id="stwar"></div>
+  <h3>Move your progress</h3>
+  <p class="hint">This site and the claude.ai version each keep their own saves. Tap “Copy my progress”, open the game on the other site or phone, paste it in here and tap “Load pasted progress”. Nothing is lost or doubled.</p>
+  <textarea id="bkbox" spellcheck="false" placeholder="Your progress code appears here, or paste one here" style="flex:none;height:70px;min-height:70px;font-size:12px"></textarea>
+  <div class="row"><button id="bkcopy">Copy my progress</button><button id="bkload" class="pri">Load pasted progress</button></div>
+  <p class="hint" id="bkmsg"></p>
   <div class="row"><button id="stdone" class="pri" style="margin-left:auto">Close</button></div>
 </div>
 
@@ -676,6 +681,35 @@ function stRender(){
   const pv=$('stprev');pv.textContent='';pv.appendChild(stCanvas(S.eqS,colorOf(S.eqC),110));
   if(!stRaf)stRaf=requestAnimationFrame(stPaint);
 }
+function bkEncode(){return 'KJ1:'+btoa(unescape(encodeURIComponent(JSON.stringify({store:S,levels:LV,words:$('words').value}))))}
+function bkMerge(d){
+  if(d.store&&typeof d.store==='object'){
+    S.learned=Object.assign({},d.store.learned||{},S.learned);const rp=Math.min(MAXP,d.store.prestige|0);
+    if(rp>S.prestige){S.prestige=rp;S.base=d.store.base|0}else if(rp===S.prestige)S.base=Math.max(S.base||0,d.store.base|0);
+  }
+  if(Array.isArray(d.levels)){
+    const m=new Map();for(const l of LV)if(l&&l.id)m.set(l.id,l);
+    for(const l of d.levels)if(l&&l.id){const o=m.get(l.id);m.set(l.id,o?Object.assign({},l,o,{done:Math.max(l.done||0,o.done||0),prog:Math.max(l.prog||0,o.prog||0),credited:o.credited||l.credited}):l)}
+    LV=[...m.values()];lvWrite();lvLabel();try{lvRender()}catch(e){}
+  }
+  let local=null;try{local=localStorage.getItem('khmerWords')}catch(e){}
+  if(typeof d.words==='string'&&d.words.trim()&&(!local||local===SAMPLE)){$('words').value=d.words;updCount()}
+  creditLevels();saveStore();stRender();
+}
+$('bkcopy').onclick=async()=>{
+  const c=bkEncode(),b=$('bkbox'),m=$('bkmsg');b.value=c;b.focus();b.select();
+  try{await navigator.clipboard.writeText(c);m.textContent='Copied. Paste it into the game on your other site or phone.'}
+  catch(e){m.textContent='Select the code in the box above and copy it by hand (tap and hold, then Copy).'}
+};
+$('bkload').onclick=()=>{
+  const m=$('bkmsg'),t=($('bkbox').value||'').trim();
+  try{
+    if(t.slice(0,4)!=='KJ1:')throw new Error('x');
+    const d=JSON.parse(decodeURIComponent(escape(atob(t.slice(4)))));
+    const before=learnedN();bkMerge(d);
+    m.textContent='Loaded. You now have '+learnedN()+' words learned ('+(learnedN()-before)+' new).';$('bkbox').value='';
+  }catch(e){m.textContent='That code did not work. Copy it again from the other game and paste the whole thing.'}
+};
 $('storebtn').onclick=()=>{$('store').classList.remove('hidden');stRender()};
 $('stdone').onclick=()=>{$('store').classList.add('hidden')};
 creditLevels();stLabel();
