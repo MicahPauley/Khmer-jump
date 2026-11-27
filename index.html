@@ -305,10 +305,18 @@ async function tnDecode(k){
 }
 function tnStop(){tnTok++;tnSrcs.forEach(s=>{try{s.stop()}catch(e){}});tnSrcs=[];tnAt=0}
 var audStat='';function setAud(t){audStat=t;const e=$('audst');if(e)e.textContent=t;const f=$('audst2');if(f)f.textContent=t}
+function unlockAudio(){
+  try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
+  try{if(!window.__sil){ // a silent looping <audio> makes iPhones play Web Audio even when the silent switch is on
+    const n=4000,u=new Uint8Array(44+n),dv=new DataView(u.buffer),w=(o,t)=>{for(let i=0;i<t.length;i++)u[o+i]=t.charCodeAt(i)};
+    w(0,'RIFF');dv.setUint32(4,36+n,true);w(8,'WAVEfmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);dv.setUint32(24,8000,true);dv.setUint32(28,8000,true);dv.setUint16(32,1,true);dv.setUint16(34,8,true);w(36,'data');dv.setUint32(40,n,true);u.fill(128,44);
+    const a=document.createElement('audio');a.src=URL.createObjectURL(new Blob([u],{type:'audio/wav'}));a.loop=true;a.setAttribute('playsinline','');a.preload='auto';window.__sil=a}
+    const pr=window.__sil.play();if(pr&&pr.catch)pr.catch(()=>{})}catch(e){}
+}
 function tnCtxGet(){const AC=window.AudioContext||window.webkitAudioContext;if(!tnCtx){try{tnCtx=new AC({sampleRate:16000})}catch(e){tnCtx=new AC()}}return tnCtx}
-addEventListener('pointerdown',function u(){try{const c=tnCtxGet();c.resume();const b=c.createBuffer(1,1,16000),n=c.createBufferSource();n.buffer=b;n.connect(c.destination);n.start(0)}catch(e){}removeEventListener('pointerdown',u,true)},true);
+addEventListener('pointerdown',function u(){unlockAudio();try{const c=tnCtxGet();c.resume();const b=c.createBuffer(1,1,16000),n=c.createBufferSource();n.buffer=b;n.connect(c.destination);n.start(0)}catch(e){}removeEventListener('pointerdown',u,true)},true);
 function tnSpeak(t,queue){
-  const k=tnKey(t),tok=tnTok;
+  const k=tnKey(t),tok=tnTok;unlockAudio();
   try{tnCtxGet().resume()}catch(e){setAud('🔇 Audio: this browser has no audio output ('+e.message+')');tts(t,queue);return}
   if(!queue){try{speechSynthesis.cancel()}catch(e){}}
   tnChain=tnChain.then(async()=>{
@@ -743,7 +751,7 @@ draw();
 setTimeout(()=>{
   try{document.fonts&&document.fonts.load('700 16px "Noto Sans Khmer"')}catch(e){}
   try{const r=loadIpa();r&&r.catch&&r.catch(()=>{})}catch(e){}
-  try{const w=Object.keys(tnData().w)[0];tnWasm().then(()=>tnDecode(w)).then(p=>{if(p&&p.length)setAud('🔊 Audio decoder ready')}).catch(e=>setAud('🔇 Audio decoder failed: '+(e&&e.message||e)+' — Khmer voice will use the device voice instead'))}catch(e){}
+  try{const w=Object.keys(tnData().w)[0];tnWasm().then(()=>tnDecode(w)).then(p=>{if(p&&p.length)setAud('🔊 Audio ready — if you hear nothing, turn the silent switch off and the volume up')}).catch(e=>setAud('🔇 Audio decoder failed: '+(e&&e.message||e)+' — Khmer voice will use the device voice instead'))}catch(e){}
   setTimeout(()=>{try{ // warm up the drawing code on a throwaway map
     const sv=[run,obs,d,y,v,qi];v=360;run=[];obs=plan(22);for(const x of [0,3000,6000,9000]){d=x;y=0;draw()}
     [run,obs,d,y,v,qi]=sv;draw()}catch(e){}},600);
