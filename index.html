@@ -61,6 +61,7 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 #lvbtn{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
 #curlv{color:#fff;opacity:.9;font-size:14px;margin:0}
 #curlv:empty{display:none}
+#wc{margin:0;color:#fff;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.3);border-radius:999px;padding:4px 14px;font-weight:800;font-size:clamp(13px,3.4vh,18px)}
 #audst{color:#fff;opacity:.75;font-size:12px;margin:0}#audst:empty{display:none}
 #sync{color:#fff;opacity:.75;font-size:12px;margin:0}
 .lvlist{flex:1;min-height:80px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
@@ -94,6 +95,7 @@ body.noipa .ip{display:none}
   <div class="title">
     <h1 class="logo">KHMER JUMP</h1>
     <p class="sub">ខ្មែរ · Learn words, dodge spikes</p>
+    <p id="wc"></p>
     <div class="chips" id="diff">
       <button data-d="easy">Easy</button>
       <button data-d="medium" class="sel">Medium</button>
@@ -124,7 +126,7 @@ body.noipa .ip{display:none}
 <div id="store" class="sheet hidden">
   <h2>🛒 Store · <span id="stpts"></span></h2>
   <div id="stprev" style="display:flex;justify-content:center"></div>
-  <p class="hint">Finish a level 100% and every new word in it counts as learned. Replaying a level never adds to your count. New colors unlock at every 50 words, up to Shiny Gold at 1,000. Then you can prestige for a new shape and a new set of colors. You always keep your old colors and shapes.</p>
+  <p class="hint">Finish a level 100% and every new word in it counts as learned. Replaying a level never adds to your count. New colors unlock at every 50 words, up to Shiny Gold at 1,000. Then you can prestige (up to 10 times) for a new shape and a new set of 20 colors each time. You always keep your old colors and shapes.</p>
   <div id="stshop"></div>
   <div id="stwar"></div>
   <div class="row"><button id="stdone" class="pri" style="margin-left:auto">Close</button></div>
@@ -563,15 +565,16 @@ function draw(){
 }
 
 // ---- store: words learned, color unlocks, prestige ----
-var SHAPES=['square','circle','diamond','star'],SHAPE_NAMES={square:'Square',circle:'Circle',diamond:'Diamond',star:'Star'};
+var SHAPES=['square','circle','diamond','star','hexagon','triangle','heart','octagon','cross','pentagon','squircle'],SHAPE_NAMES={square:'Square',circle:'Circle',diamond:'Diamond',star:'Star',hexagon:'Hexagon',triangle:'Triangle',heart:'Heart',octagon:'Octagon',cross:'Cross',pentagon:'Pentagon',squircle:'Rounded square'};
 var BASECOL={id:'orange',name:'Classic Orange',c:'#f28c1b'};
-var MAXP=3,NCOL=20;
+var MAXP=10,NCOL=20;
 function hslHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));return '#'+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('')}
 var HUES=[['Ruby',0],['Coral',12],['Tangerine',24],['Amber',42],['Lemon',56],['Lime',84],['Fern',112],['Emerald',146],['Mint',166],['Teal',178],['Cyan',190],['Sky',205],['Cobalt',222],['Indigo',245],['Violet',268],['Orchid',288],['Magenta',312],['Rose',336],['Slate',230]];
-var TSTYLE=[{p:'',s:78,l:52},{p:'Deep ',s:80,l:36},{p:'Pastel ',s:62,l:76},{p:'Neon ',s:100,l:58}];
-var TOPCOL=[{name:'Shiny Gold',c:'#f5b301',hi:'#fff4b0',lo:'#b9770e'},{name:'Shiny Silver',c:'#cbd5e1',hi:'#ffffff',lo:'#8392a6'},{name:'Shiny Rainbow',c:'#ff5a8a',rainbow:1},{name:'Shiny Diamond',c:'#9be7ff',hi:'#ffffff',lo:'#4aa8d8'}];
+var TSTYLE=[{p:'',s:78,l:52},{p:'Deep ',s:80,l:36},{p:'Pastel ',s:62,l:76},{p:'Neon ',s:100,l:58},{p:'Muted ',s:32,l:50},{p:'Midnight ',s:75,l:24},{p:'Candy ',s:90,l:68},{p:'Dusty ',s:28,l:64},{p:'Vivid ',s:95,l:45},{p:'Ghost ',s:40,l:84},{p:'Royal ',s:70,l:30}];
+var RAINBOW=['#ff4d4d','#ffd54a','#4dde6a','#4dc3ff','#a05cff','#ff4dd2'];
+var TOPCOL=[{name:'Shiny Gold',c:'#f5b301',hi:'#fff4b0',lo:'#b9770e'},{name:'Shiny Silver',c:'#cbd5e1',hi:'#ffffff',lo:'#8392a6'},{name:'Shiny Rainbow',c:'#ff5a8a',stops:RAINBOW},{name:'Shiny Diamond',c:'#9be7ff',hi:'#ffffff',lo:'#4aa8d8'},{name:'Shiny Emerald',c:'#10b981',hi:'#b6ffe0',lo:'#046c4e'},{name:'Shiny Ruby',c:'#e11d48',hi:'#ffb3c4',lo:'#7f0a26'},{name:'Shiny Amethyst',c:'#a855f7',hi:'#ecd2ff',lo:'#5b1d99'},{name:'Shiny Bronze',c:'#cd7f32',hi:'#ffd9a8',lo:'#7a4210'},{name:'Shiny Obsidian',c:'#3b3b4f',hi:'#8e8ea8',lo:'#0a0a14'},{name:'Shiny Aurora',c:'#2dd4bf',stops:['#00ffa3','#00d4ff','#7a5cff','#ff5cf0']},{name:'Shiny Galaxy',c:'#6a11cb',stops:['#0f0c29','#6a11cb','#2575fc','#00d4ff','#ff6ec7']}];
 var TIERS=TSTYLE.map((st,t)=>{
-  const a=HUES.map(([n,h],i)=>({id:'t'+t+'c'+(i+1),name:st.p+n,c:hslHex(h,n==='Slate'?22:st.s,st.l),thr:50*(i+1)}));
+  const a=HUES.map(([n,h],i)=>({id:'t'+t+'c'+(i+1),name:st.p+n,c:hslHex((h+t*5)%360,n==='Slate'?22:st.s,st.l),thr:50*(i+1)}));
   a.push(Object.assign({id:'t'+t+'c'+NCOL,thr:50*NCOL,shine:1},TOPCOL[t]));return a;
 });
 var S={learned:{},base:0,prestige:0,eqC:'orange',eqS:'square'};
@@ -584,11 +587,16 @@ function ownedShapes(){return SHAPES.slice(0,Math.min(S.prestige,SHAPES.length-1
 function eqOk(){const c=colorOf(S.eqC);if(c!==BASECOL){const t=+c.id.slice(1,c.id.indexOf('c'));if(!unlocked(t,c))S.eqC='orange'}if(ownedShapes().indexOf(S.eqS)<0)S.eqS='square'}
 function saveStore(){eqOk();try{localStorage.setItem('khmerStore',JSON.stringify(S))}catch(e){}stLabel();try{cloudPush()}catch(e){}}
 function learnWords(list){let n=0;for(const x of list){const k=(x.km||'').trim();if(k&&!S.learned[k]){S.learned[k]=1;n++}}if(n)saveStore();return n}
-function stLabel(){const b=$('storebtn');if(b)b.textContent='🛒 Store ('+learnedN()+' words)'}
+function stLabel(){const b=$('storebtn');if(b)b.textContent='🛒 Store';const w=$('wc');if(w)w.textContent='📚 '+learnedN()+' word'+(learnedN()===1?'':'s')+' learned'}
 function blockPath(c,s,shape){
   const h=s/2;c.beginPath();
   if(shape==='circle'){c.arc(0,0,h*1.04,0,7)}
   else if(shape==='diamond'){const r=h*1.38;c.moveTo(0,-r);c.lineTo(r,0);c.lineTo(0,r);c.lineTo(-r,0);c.closePath()}
+  else if(shape==='hexagon'||shape==='pentagon'||shape==='octagon'){const n=shape==='hexagon'?6:shape==='pentagon'?5:8,R=h*(n===6?1.2:n===5?1.28:1.08),r0=n===8?Math.PI/8:-Math.PI/2;for(let i=0;i<n;i++){const a=r0+i*2*Math.PI/n,x=Math.cos(a)*R,y=Math.sin(a)*R+(n===5?h*.08:0);i?c.lineTo(x,y):c.moveTo(x,y)}c.closePath()}
+  else if(shape==='triangle'){c.moveTo(0,-h*1.68);c.lineTo(h*1.5,h*.95);c.lineTo(-h*1.5,h*.95);c.closePath()}
+  else if(shape==='heart'){c.moveTo(0,h*1.05);c.bezierCurveTo(-h*2,-h*.05,-h*1.15,-h*1.6,0,-h*.6);c.bezierCurveTo(h*1.15,-h*1.6,h*2,-h*.05,0,h*1.05);c.closePath()}
+  else if(shape==='cross'){const a=h*.64,L=h*1.28;[[-a,-L],[a,-L],[a,-a],[L,-a],[L,a],[a,a],[a,L],[-a,L],[-a,a],[-L,a],[-L,-a],[-a,-a]].forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]));c.closePath()}
+  else if(shape==='squircle'){const r=h*.62;c.moveTo(-h+r,-h);c.arcTo(h,-h,h,h,r);c.arcTo(h,h,-h,h,r);c.arcTo(-h,h,-h,-h,r);c.arcTo(-h,-h,h,-h,r);c.closePath()}
   else if(shape==='star'){const R=h*1.45,r=h*.72;for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,q=i%2?r:R,x=Math.cos(a)*q,y=Math.sin(a)*q;i?c.lineTo(x,y):c.moveTo(x,y)}c.closePath()}
   else c.rect(-h,-h,s,s);
 }
@@ -596,7 +604,7 @@ function drawBlock(c,s,shape,col,t,dead){
   const h=s/2,k=s/36;
   blockPath(c,s,shape);
   if(dead)c.fillStyle='#c0392b';
-  else if(col.rainbow){const g=c.createLinearGradient(-h,-h,h,h);['#ff4d4d','#ffd54a','#4dde6a','#4dc3ff','#a05cff','#ff4dd2'].forEach((q,i,a)=>g.addColorStop(i/(a.length-1),q));c.fillStyle=g}
+  else if(col.stops){const g=c.createLinearGradient(-h,-h,h,h);col.stops.forEach((q,i,a)=>g.addColorStop(i/(a.length-1),q));c.fillStyle=g}
   else if(col.shine){const g=c.createLinearGradient(-h,-h,h,h);g.addColorStop(0,col.hi);g.addColorStop(.5,col.c);g.addColorStop(1,col.lo);c.fillStyle=g}
   else c.fillStyle=col.c;
   c.fill();
@@ -618,7 +626,7 @@ function stEl(tag,cls,txt){const e=document.createElement(tag);if(cls)e.classNam
 function stRender(){
   stPrev=[];eqOk();
   const n=learnedN(),pg=prog();
-  $('stpts').textContent=n+' words learned';
+  $('stpts').textContent=n+' words learned · prestige '+S.prestige+'/'+MAXP;
   const shop=$('stshop');shop.textContent='';
   const tier=TIERS[S.prestige];
   // prestige
