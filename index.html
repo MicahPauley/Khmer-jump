@@ -57,7 +57,7 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 .row2{display:flex;gap:8px;justify-content:center}
 #fillT{background:#f28c1b;color:#1d1d1f;border:2px solid #b8650a;border-radius:999px;padding:7px 16px;font-size:14px;font-weight:700}
 #storebtn{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
-.sheet h3{margin:10px 0 4px;font-size:15px}.sc{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin-bottom:6px}.sc .lvt{flex:1;min-width:0}.sc button{flex:none;padding:8px 12px}.wgrid{display:flex;flex-wrap:wrap;gap:8px}.wbtn{padding:2px;border-radius:12px;line-height:0}.wbtn.sel{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}.stcv{width:56px;height:56px}#stprev .stcv{width:110px;height:110px}
+.sheet h3{margin:10px 0 4px;font-size:15px}.sc{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin-bottom:6px}.sc .lvt{flex:1;min-width:0}.sc button{flex:none;padding:8px 12px}.wgrid{display:flex;flex-wrap:wrap;gap:8px}.wbtn{padding:2px;border-radius:12px;line-height:0;position:relative}.wbtn.lk{opacity:.45}.wbtn .lbl{position:absolute;left:0;right:0;bottom:2px;font:700 11px/1 system-ui,sans-serif;color:var(--fg);text-align:center}.wbtn.sel{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}.stcv{width:56px;height:56px}#stprev .stcv{width:110px;height:110px}
 #lvbtn{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
 #curlv{color:#fff;opacity:.9;font-size:14px;margin:0}
 #curlv:empty{display:none}
@@ -124,7 +124,7 @@ body.noipa .ip{display:none}
 <div id="store" class="sheet hidden">
   <h2>🛒 Store · <span id="stpts"></span></h2>
   <div id="stprev" style="display:flex;justify-content:center"></div>
-  <p class="hint">Finish a level 100% and you earn 1 point for every word in it. Spend points on colors. Own the gold color, then prestige for a new shape. You always keep your old colors and shapes.</p>
+  <p class="hint">Finish a level 100% and every new word in it counts as learned. Replaying a level never adds to your count. New colors unlock at every 50 words, up to Shiny Gold at 1,000. Then you can prestige for a new shape and a new set of colors. You always keep your old colors and shapes.</p>
   <div id="stshop"></div>
   <div id="stwar"></div>
   <div class="row"><button id="stdone" class="pri" style="margin-left:auto">Close</button></div>
@@ -433,8 +433,8 @@ function die(t){
 function win(){
   mode='dead';fail='';
   const lvl=LV.find(x=>x.id===curLv);if(lvl){lvl.done=(lvl.done||0)+1;lvl.best=lvl.best?Math.min(lvl.best,att):att;lvl.prog=100;lvWrite()}$('q').textContent='🎉 Level complete!';$('opts').innerHTML='';
-  const earn=run.length;S.earned=(S.earned||0)+earn;saveStore();
-  msgBtn('All '+run.length+' words in '+att+' attempt'+(att>1?'s':'')+'! +'+earn+' points ⭐','Play again',()=>{att=0;begin()});draw();
+  const earn=learnWords(run);
+  msgBtn('All '+run.length+' words in '+att+' attempt'+(att>1?'s':'')+'! '+(earn?'+'+earn+' new word'+(earn>1?'s':'')+' learned ⭐':'No new words this time — replays don’t add to your count.'),'Play again',()=>{att=0;begin()});draw();
 }
 function floorAt(x,os){
   let f=0;
@@ -562,24 +562,29 @@ function draw(){
   ctx.restore();
 }
 
-// ---- store, points, skins, prestige ----
+// ---- store: words learned, color unlocks, prestige ----
 var SHAPES=['square','circle','diamond','star'],SHAPE_NAMES={square:'Square',circle:'Circle',diamond:'Diamond',star:'Star'};
 var BASECOL={id:'orange',name:'Classic Orange',c:'#f28c1b'};
-var COSTS=[50,100,150,1000];
-var TIERS=[
- [{id:'a1',name:'Sky Blue',c:'#3aa0ff'},{id:'a2',name:'Leaf Green',c:'#3ccf6a'},{id:'a3',name:'Royal Purple',c:'#9b5de5'},{id:'a4',name:'Shiny Gold',c:'#f5b301',hi:'#fff4b0',lo:'#b9770e',shine:1}],
- [{id:'b1',name:'Teal',c:'#14b8a6'},{id:'b2',name:'Ruby Red',c:'#ef4444'},{id:'b3',name:'Hot Pink',c:'#ec4899'},{id:'b4',name:'Shiny Silver',c:'#cbd5e1',hi:'#ffffff',lo:'#8392a6',shine:1}],
- [{id:'c1',name:'Lime',c:'#a3e635'},{id:'c2',name:'Indigo',c:'#6366f1'},{id:'c3',name:'Coral',c:'#fb7185'},{id:'c4',name:'Shiny Rainbow',c:'#ff5a8a',rainbow:1,shine:1}]
-];
-var MAXP=3;
-var S={earned:0,spent:0,owned:{},prestige:0,eqC:'orange',eqS:'square'};
-try{const r=JSON.parse(localStorage.getItem('khmerStore')||'null');if(r&&typeof r==='object')S=Object.assign(S,r,{owned:Object.assign({},r.owned||{})})}catch(e){}
+var MAXP=3,NCOL=20;
+function hslHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));return '#'+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('')}
+var HUES=[['Ruby',0],['Coral',12],['Tangerine',24],['Amber',42],['Lemon',56],['Lime',84],['Fern',112],['Emerald',146],['Mint',166],['Teal',178],['Cyan',190],['Sky',205],['Cobalt',222],['Indigo',245],['Violet',268],['Orchid',288],['Magenta',312],['Rose',336],['Slate',230]];
+var TSTYLE=[{p:'',s:78,l:52},{p:'Deep ',s:80,l:36},{p:'Pastel ',s:62,l:76},{p:'Neon ',s:100,l:58}];
+var TOPCOL=[{name:'Shiny Gold',c:'#f5b301',hi:'#fff4b0',lo:'#b9770e'},{name:'Shiny Silver',c:'#cbd5e1',hi:'#ffffff',lo:'#8392a6'},{name:'Shiny Rainbow',c:'#ff5a8a',rainbow:1},{name:'Shiny Diamond',c:'#9be7ff',hi:'#ffffff',lo:'#4aa8d8'}];
+var TIERS=TSTYLE.map((st,t)=>{
+  const a=HUES.map(([n,h],i)=>({id:'t'+t+'c'+(i+1),name:st.p+n,c:hslHex(h,n==='Slate'?22:st.s,st.l),thr:50*(i+1)}));
+  a.push(Object.assign({id:'t'+t+'c'+NCOL,thr:50*NCOL,shine:1},TOPCOL[t]));return a;
+});
+var S={learned:{},base:0,prestige:0,eqC:'orange',eqS:'square'};
+try{const r=JSON.parse(localStorage.getItem('khmerStore')||'null');if(r&&typeof r==='object'){S.learned=Object.assign({},r.learned||{});S.base=r.base|0;S.prestige=Math.min(MAXP,r.prestige|0);S.eqC=r.eqC||'orange';S.eqS=r.eqS||'square'}}catch(e){}
+function learnedN(){return Object.keys(S.learned).length}
+function prog(){return Math.max(0,learnedN()-(S.base||0))}
+function unlocked(t,c){return t<S.prestige||(t===S.prestige&&prog()>=c.thr)}
 function colorOf(id){if(id==='orange')return BASECOL;for(const t of TIERS)for(const c of t)if(c.id===id)return c;return BASECOL}
-function ownedColors(){const a=[BASECOL];for(const t of TIERS)for(const c of t)if(S.owned[c.id])a.push(c);return a}
 function ownedShapes(){return SHAPES.slice(0,Math.min(S.prestige,SHAPES.length-1)+1)}
-function pts(){return Math.max(0,(S.earned||0)-(S.spent||0))}
-function saveStore(){try{localStorage.setItem('khmerStore',JSON.stringify(S))}catch(e){}stLabel();try{cloudPush()}catch(e){}}
-function stLabel(){const b=$('storebtn');if(b)b.textContent='🛒 Store ('+pts()+' pts)'}
+function eqOk(){const c=colorOf(S.eqC);if(c!==BASECOL){const t=+c.id.slice(1,c.id.indexOf('c'));if(!unlocked(t,c))S.eqC='orange'}if(ownedShapes().indexOf(S.eqS)<0)S.eqS='square'}
+function saveStore(){eqOk();try{localStorage.setItem('khmerStore',JSON.stringify(S))}catch(e){}stLabel();try{cloudPush()}catch(e){}}
+function learnWords(list){let n=0;for(const x of list){const k=(x.km||'').trim();if(k&&!S.learned[k]){S.learned[k]=1;n++}}if(n)saveStore();return n}
+function stLabel(){const b=$('storebtn');if(b)b.textContent='🛒 Store ('+learnedN()+' words)'}
 function blockPath(c,s,shape){
   const h=s/2;c.beginPath();
   if(shape==='circle'){c.arc(0,0,h*1.04,0,7)}
@@ -611,54 +616,51 @@ function stPaint(){
 }
 function stEl(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e}
 function stRender(){
-  stPrev=[];$('stpts').textContent=pts()+' pts';
+  stPrev=[];eqOk();
+  const n=learnedN(),pg=prog();
+  $('stpts').textContent=n+' words learned';
   const shop=$('stshop');shop.textContent='';
-  // colour shop (current tier)
   const tier=TIERS[S.prestige];
-  if(tier){
-    shop.appendChild(stEl('h3','','New colors'+(S.prestige?' · set '+(S.prestige+1):'')));
-    let nextFound=false;
-    tier.forEach((col,i)=>{
-      const cost=COSTS[i],owned=!!S.owned[col.id],card=stEl('div','sc');
-      card.appendChild(stCanvas(S.eqS,col,56));
-      const t=stEl('div','lvt');t.appendChild(stEl('b','',col.name));t.appendChild(document.createElement('br'));
-      t.appendChild(stEl('span','hint',owned?'Owned ✓':cost+' points'));card.appendChild(t);
-      if(!owned){
-        const isNext=!nextFound;nextFound=true;
-        const b=stEl('button',isNext&&pts()>=cost?'pri':'',isNext?(pts()>=cost?'Buy':'Need '+(cost-pts())+' more'):'🔒');
-        b.disabled=!isNext||pts()<cost;
-        b.onclick=()=>{if(pts()<cost)return;S.spent+=cost;S.owned[col.id]=1;S.eqC=col.id;saveStore();stRender()};
-        card.appendChild(b);
-      }
-      shop.appendChild(card);
-    });
-  }else shop.appendChild(stEl('p','hint','You have unlocked every shape and color. 🎉'));
   // prestige
-  if(S.prestige<MAXP){
-    const top=TIERS[S.prestige]&&TIERS[S.prestige][3];
-    if(top&&S.owned[top.id]){
-      const ns=SHAPES[S.prestige+1],card=stEl('div','sc');
-      card.appendChild(stCanvas(ns,colorOf(S.eqC),56));
-      const t=stEl('div','lvt');t.appendChild(stEl('b','','✨ Prestige available!'));t.appendChild(document.createElement('br'));
-      t.appendChild(stEl('span','hint','Unlock the '+SHAPE_NAMES[ns]+' shape'+(TIERS[S.prestige+1]?' and a new set of colors to buy':'')+'. You keep everything you own.'));card.appendChild(t);
-      const b=stEl('button','pri','Prestige');let armed=0;
-      b.onclick=()=>{if(!armed){armed=1;b.textContent='Tap again to confirm';setTimeout(()=>{armed=0;b.textContent='Prestige'},3000);return}
-        S.prestige++;S.eqS=SHAPES[S.prestige];saveStore();stRender()};
-      card.appendChild(b);shop.insertBefore(card,shop.firstChild);
-    }
+  if(S.prestige<MAXP&&pg>=tier[NCOL-1].thr){
+    const ns=SHAPES[S.prestige+1],card=stEl('div','sc');
+    card.appendChild(stCanvas(ns,colorOf(S.eqC),56));
+    const t=stEl('div','lvt');t.appendChild(stEl('b','','✨ Prestige available!'));t.appendChild(document.createElement('br'));
+    t.appendChild(stEl('span','hint','Unlock the '+SHAPE_NAMES[ns]+' shape and a new set of '+NCOL+' colors. Your progress bar starts again from 0, and you keep everything you have unlocked.'));card.appendChild(t);
+    const b=stEl('button','pri','Prestige');let armed=0;
+    b.onclick=()=>{if(!armed){armed=1;b.textContent='Tap again to confirm';setTimeout(()=>{armed=0;b.textContent='Prestige'},3000);return}
+      S.base=learnedN();S.prestige++;S.eqS=SHAPES[S.prestige];saveStore();stRender()};
+    card.appendChild(b);shop.appendChild(card);
   }
-  // wardrobe
+  // progress to next unlock
+  const nxt=tier.find(c=>pg<c.thr);
+  const pb=stEl('div','');
+  if(nxt){
+    pb.appendChild(stEl('p','hint','Next unlock: '+nxt.name+' at '+nxt.thr+' words in this set — '+(nxt.thr-pg)+' to go.'));
+    const bar=stEl('div','pbar'),fl=document.createElement('i');fl.style.width=Math.min(100,100*(pg-(nxt.thr-50))/50)+'%';bar.appendChild(fl);pb.appendChild(bar);
+  }else if(S.prestige>=MAXP)pb.appendChild(stEl('p','hint','You have unlocked every color and shape. 🎉'));
+  shop.appendChild(pb);
+  const sw=(t,col,locked)=>{
+    const b=stEl('button','wbtn'+(S.eqC===col.id?' sel':'')+(locked?' lk':''));b.title=col.name+(locked?' · '+col.thr+' words':'');b.setAttribute('aria-label',col.name);
+    b.appendChild(stCanvas(S.eqS,col,56));if(locked)b.appendChild(stEl('span','lbl',String(col.thr)));
+    b.disabled=!!locked;b.onclick=()=>{S.eqC=col.id;saveStore();stRender()};return b};
+  shop.appendChild(stEl('h3','','Colors · set '+(S.prestige+1)));
+  const g=stEl('div','wgrid');
+  if(S.prestige===0){const b=sw(0,BASECOL,false);g.appendChild(b)}
+  for(const col of tier)g.appendChild(sw(S.prestige,col,!unlocked(S.prestige,col)));
+  shop.appendChild(g);
   const war=$('stwar');war.textContent='';
-  war.appendChild(stEl('h3','','My colors'));
-  const g1=stEl('div','wgrid');
-  for(const col of ownedColors()){const b=stEl('button','wbtn'+(S.eqC===col.id?' sel':''));b.title=col.name;b.setAttribute('aria-label',col.name);b.appendChild(stCanvas(S.eqS,col,56));b.onclick=()=>{S.eqC=col.id;saveStore();stRender()};g1.appendChild(b)}
-  war.appendChild(g1);
-  war.appendChild(stEl('h3','','My shapes'));
+  if(S.prestige>0){
+    war.appendChild(stEl('h3','','Earlier colors'));const g1=stEl('div','wgrid');
+    g1.appendChild(sw(0,BASECOL,false));
+    for(let t=0;t<S.prestige;t++)for(const col of TIERS[t])g1.appendChild(sw(t,col,false));
+    war.appendChild(g1);
+  }
+  war.appendChild(stEl('h3','','Shapes'));
   const g2=stEl('div','wgrid');
   for(const sh of ownedShapes()){const b=stEl('button','wbtn'+(S.eqS===sh?' sel':''));b.title=SHAPE_NAMES[sh];b.setAttribute('aria-label',SHAPE_NAMES[sh]);b.appendChild(stCanvas(sh,colorOf(S.eqC),56));b.onclick=()=>{S.eqS=sh;saveStore();stRender()};g2.appendChild(b)}
   war.appendChild(g2);
-  // big preview
-  const pv=$('stprev');pv.textContent='';const big=stCanvas(S.eqS,colorOf(S.eqC),110);pv.appendChild(big);
+  const pv=$('stprev');pv.textContent='';pv.appendChild(stCanvas(S.eqS,colorOf(S.eqC),110));
   if(!stRaf)stRaf=requestAnimationFrame(stPaint);
 }
 $('storebtn').onclick=()=>{$('store').classList.remove('hidden');stRender()};
@@ -702,10 +704,10 @@ async function cloudFlush(){
         lvLabel();try{lvRender()}catch(e){}
       }
       if(d.store&&typeof d.store==='object'){
-        const r=d.store;S.earned=Math.max(S.earned||0,r.earned||0);S.spent=Math.max(S.spent||0,r.spent||0);
-        S.owned=Object.assign({},r.owned||{},S.owned||{});S.prestige=Math.max(S.prestige||0,r.prestige||0);
+        const r=d.store;S.learned=Object.assign({},r.learned||{},S.learned||{});
+        if((r.prestige|0)>S.prestige){S.prestige=Math.min(MAXP,r.prestige|0);S.base=r.base|0}else if((r.prestige|0)===S.prestige)S.base=Math.max(S.base||0,r.base|0);
         if(S.eqC==='orange'&&S.eqS==='square'){S.eqC=r.eqC||'orange';S.eqS=r.eqS||'square'}
-        try{localStorage.setItem('khmerStore',JSON.stringify(S))}catch(e){}stLabel()
+        eqOk();try{localStorage.setItem('khmerStore',JSON.stringify(S))}catch(e){}stLabel()
       }
       let local=null;try{local=localStorage.getItem('khmerWords')}catch(e){}
       if(typeof d.words==='string'&&d.words.trim()&&(!local||local===SAMPLE)){$('words').value=d.words;try{localStorage.setItem('khmerWords',d.words)}catch(e){}updCount()}
