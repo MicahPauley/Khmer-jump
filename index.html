@@ -168,14 +168,14 @@ body.noipa .ip{display:none}
 
 <div id="verses" class="sheet hidden" style="overflow:auto">
   <h2>📖 Verses</h2>
-  <p class="hint">Save a verse (or several verses) and play it word by word, always in order, until you can say it from memory. Small words like “and the” or “of the” are joined into one choice.</p>
+  <p class="hint">Save a Khmer verse (or several verses) and play it word by word, always in order, until you can say it from memory. Small words like និង and នៃ are joined with the next word into one choice.</p>
   <div class="lvlist" id="vlist" style="flex:none;overflow:visible"></div>
   <p class="hint" id="vempty">No verses saved yet. Add one below or pick a suggestion.</p>
   <h3>Add a verse</h3>
-  <input id="vref" placeholder="Reference, e.g. John 3:16" style="width:100%;margin-bottom:6px">
-  <textarea id="vtext" rows="4" placeholder="Type or paste the verse here…" style="flex:none;height:96px"></textarea>
+  <input id="vref" placeholder="Reference, e.g. យ៉ូហាន 3:16" style="width:100%;margin-bottom:6px">
+  <textarea id="vtext" rows="4" placeholder="Paste the verse in Khmer here…" style="flex:none;height:96px"></textarea>
   <div class="row"><button class="pri" id="vsave">Save verse</button><span class="hint" id="vmsg"></span></div>
-  <h3>🎲 Suggested verses (BSB)</h3>
+  <h3>🎲 Suggested verses</h3>
   <div class="lvlist" id="vrecs" style="flex:none;overflow:visible"></div>
   <div class="row"><button id="vreroll">🎲 New suggestions</button><button id="vclose" style="margin-left:auto">Close</button></div>
 </div>
@@ -1332,6 +1332,7 @@ function vWords(text){
           const t=sg.segment;
           if(sg.isWordLike){if(/^[\d០-៩]+$/.test(t))continue;out.push(t)}
           else if(t.trim()&&out.length)out[out.length-1]+=t.trim();
+          else if(!t.trim()&&out.length&&!/\u200b$/.test(out[out.length-1]))out[out.length-1]+='\u200b';
         }
         if(out.length>2)return out;
       }catch(e){}
@@ -1351,33 +1352,19 @@ function vJoin(text,arr){return arr.join(vIsKm(text)?'':' ')}
 function vChunks(text){
   const w=vWords(text),out=[],km=vIsKm(text);
   const sm=x=>km?KSMALL.has(x.replace(/[។៕,.;:!?“”‘’"'()​]/g,'')):VSMALL.has(x.toLowerCase().replace(/[^a-z]/g,''));
-  const stop=x=>/[.,;:!?។៕]$/.test(x);
+  const stop=x=>/[.,;:!?។៕\u200b]$/.test(x);
   for(let i=0;i<w.length;i++){
     if(i+1<w.length&&sm(w[i])&&sm(w[i+1])&&!stop(w[i])){out.push(km?w[i]+w[i+1]:w[i]+' '+w[i+1]);i++}else out.push(w[i]);
   }
   return out;
 }
-var VPOOL=[
- ['John 3:16','For God so loved the world that He gave His one and only Son, that everyone who believes in Him shall not perish but have eternal life.'],
- ['Psalm 23:1','The LORD is my shepherd; I shall not want.'],
- ['Philippians 4:13','I can do all things through Christ who strengthens me.'],
- ['Proverbs 3:5-6','Trust in the LORD with all your heart, and lean not on your own understanding; in all your ways acknowledge Him, and He will make your paths straight.'],
- ['Joshua 1:9','Have I not commanded you to be strong and courageous? Do not be afraid or discouraged, for the LORD your God is with you wherever you go.'],
- ['Romans 8:28','And we know that God works all things together for the good of those who love Him, who are called according to His purpose.'],
- ['Isaiah 41:10','Do not fear, for I am with you; do not be afraid, for I am your God. I will strengthen you and help you; I will uphold you with My righteous right hand.'],
- ['Matthew 6:33','But seek first the kingdom of God and His righteousness, and all these things will be added unto you.'],
- ['Psalm 119:105','Your word is a lamp to my feet and a light to my path.'],
- ['Jeremiah 29:11','For I know the plans I have for you, declares the LORD, plans to prosper you and not to harm you, plans to give you a future and a hope.'],
- ['Psalm 46:1','God is our refuge and strength, an ever-present help in times of trouble.'],
- ['Romans 12:2','Do not conform to the pattern of this world, but be transformed by the renewing of your mind. Then you will be able to test and approve what is God’s good, pleasing, and perfect will.']
-];
 var VPOOLKM=[
  ['ទំនុកដំកើង 23:1','ព្រះយេហូវ៉ាទ្រង់ជាអ្នកគង្វាលខ្ញុំ ខ្ញុំនឹងមិនខ្វះអ្វីឡើយ។'],
  ['ទំនុកដំកើង 119:105','ព្រះបន្ទូលទ្រង់ជាចង្កៀងដល់ជើងទូលបង្គំ ហើយជាពន្លឺបំភ្លឺផ្លូវទូលបង្គំ។'],
  ['យ៉ូហាន 3:16','ដ្បិតព្រះទ្រង់ស្រឡាញ់មនុស្សលោកខ្លាំងណាស់ បានជាទ្រង់ប្រទានព្រះរាជបុត្រាតែមួយរបស់ទ្រង់ ដើម្បីឲ្យអស់អ្នកណាដែលជឿដល់ព្រះរាជបុត្រានោះ មិនត្រូវវិនាសឡើយ គឺឲ្យមានជីវិតអស់កល្បជានិច្ចវិញ។']
 ];
 var VRECS=[];
-function vReroll(){const have=new Set(VL.map(v=>v.ref.toLowerCase()));const kh=shuffle(VPOOLKM.filter(p=>!have.has(p[0].toLowerCase()))),en=shuffle(VPOOL.filter(p=>!have.has(p[0].toLowerCase())));VRECS=[...kh.slice(0,2),...en.slice(0,3-Math.min(2,kh.length))].slice(0,3)}
+function vReroll(){const have=new Set(VL.map(v=>v.ref.toLowerCase()));VRECS=shuffle(VPOOLKM.filter(p=>!have.has(p[0].toLowerCase()))).slice(0,3)}
 function vRender(){
   const box=$('vlist');box.textContent='';$('vempty').classList.toggle('hidden',VL.length>0);
   for(const v of VL){
@@ -1414,7 +1401,7 @@ function vWin(){
 }
 function vSetQ(i){
   const w=run[i];
-  let pool=[...new Set(run.map(x=>x.km))].filter(k=>k.toLowerCase()!==w.km.toLowerCase());
+  let pool=[...new Set(run.map(x=>x.km))].filter(k=>k.replace(/\u200b/g,'')!==w.km.replace(/\u200b/g,''));
   if(!pool.length)pool=['the Lord','and','He will','God'].filter(k=>k!==w.km);
   pool.sort((a,b)=>Math.abs(a.length-w.km.length)-Math.abs(b.length-w.km.length)+(Math.random()-.5)*6);
   opts=shuffle([w.km,pool[Math.floor(Math.random()*Math.min(4,pool.length))]]);
@@ -1427,6 +1414,7 @@ $('vclose').onclick=()=>$('verses').classList.add('hidden');
 $('vreroll').onclick=()=>{vReroll();vRecRender()};
 $('vsave').onclick=()=>{
   const ref=($('vref').value||'').trim()||'My verse',text=($('vtext').value||'').trim();
+  if(!vIsKm(text)){$('vmsg').textContent='Please paste the verse in Khmer.';return}
   if(vWords(text).length<3){$('vmsg').textContent='Paste at least a few words of the verse.';return}
   vAdd(ref,text);$('vref').value='';$('vtext').value='';$('vmsg').textContent='Saved ✓';vRender();vReroll();vRecRender();
 };
