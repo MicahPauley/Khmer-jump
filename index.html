@@ -1718,6 +1718,15 @@ function vFirst(key,already){const c=vCred();if(c[key]||already)return false;c[k
 function vCredit(){ /* every word in the verse: new -> learned (new words), already known -> reviewed */
   let nw=0,rv=0;try{for(const x of run){for(const w of vWords(x.km||'')){const k=vKey(w);if(!k)continue;if(S.learned[k])rv++;else{S.learned[k]=1;nw++}}}}catch(e){}
   S.reviewed=(S.reviewed|0)+rv;return{nw,rv}}
+function vBackfill(){ /* one time: finished verses -> their words count as learned; memorized total = each finished verse once */
+  if(S.vmig)return;let ch=false;
+  try{const c=vCred(),keys={};
+    for(const v of VL){if((v.done|0)>0||(v.prog|0)>=100){const ws=vWords(v.text);for(const w of ws){const k=vKey(w);if(k&&!S.learned[k]){S.learned[k]=1;ch=true}}keys[v.ref+'|'+ws.length]=ws.length;c[v.ref+'|'+ws.length]=1}}
+    for(const k in c){if(keys[k]===undefined){const n=parseInt(k.split('|').pop(),10);if(n>0)keys[k]=n}}
+    try{localStorage.setItem('khmerVCred',JSON.stringify(c))}catch(e){}
+    let tot=0;for(const k in keys)tot+=keys[k];if(tot!==(S.vmem|0)){S.vmem=tot;ch=true}
+    S.vmig=1;saveStore()}catch(e){}
+}
 function vWin(){
   mode='dead';fail='';$('q').textContent='🎉 '+VS.ref;$('opts').innerHTML='';
   let first=true;{const vv=VS.id&&VL.find(x=>x.id===VS.id);if(vv){first=vFirst(VS.ref+'|'+VS.nwords,vv.done|0);vv.prog=100;vv.done=(vv.done|0)+1;vSaveAll()}else first=vFirst(VS.ref+'|'+VS.nwords,0)}
@@ -2056,7 +2065,7 @@ $('bkload').onclick=()=>{
 };
 $('storebtn').onclick=()=>{$('store').classList.remove('hidden');stRender()};
 $('stdone').onclick=()=>{$('store').classList.add('hidden')};
-creditLevels();stLabel();
+creditLevels();try{vBackfill()}catch(e){}stLabel();
 
 // ---- account sync (claude.ai sign-in) ----
 var cloud={doc:null,ok:false,timer:0,busy:false,again:false};
