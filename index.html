@@ -273,8 +273,25 @@ function parseText(t){
   }).filter(Boolean);
 }
 function parse(){return parseText($('words').value)}
+setTimeout(()=>{try{$('words').addEventListener('blur',()=>{autoEn()})}catch(e){}},0);
 function updCount(){const a=parse(),n=a.length,m=a.filter(x=>!x.en).length,mk2=a.filter(x=>!x.km).length;$('count').textContent=n+' words = '+n+' jumps'+(n<3?' (need at least 3)':'')+(m?' · '+m+' need English':'')+(mk2?' · '+mk2+' need Khmer':'')+' · '+a.filter(x=>x.km&&hasAud(x.km)).length+' with recorded audio';$('edit').textContent='✎ My words ('+n+')';{const ft=$('fillT');if(ft){ft.classList.toggle('hidden',!(m||mk2));ft.textContent='✨ Fill in '+(m&&mk2?'English + Khmer':m?'English':'Khmer')}}try{localStorage.setItem('khmerWords',$('words').value)}catch(e){}}
+var autoBusy=false;
+async function autoEn(){ /* a line with only Khmer gets its English from the dictionary, as: english = khmer */
+  if(autoBusy||typeof dictLook!=='function')return 0;autoBusy=true;let n=0;
+  try{const ta=$('words'),lines=ta.value.split('\n');let ch=false;
+    for(let i=0;i<lines.length;i++){
+      const raw=lines[i],t=raw.replace(/^\s*[\d\u17E0-\u17E9]+\s*[.)\-:]?\s*/,'').trim();
+      if(!t||!KH.test(t)||/[A-Za-z]/.test(t))continue;
+      const km=t.split(/=|\t/).map(x=>x.trim()).filter(Boolean).find(x=>KH.test(x));if(!km)continue;
+      const d=await dictLook(km.replace(/[\u200b]/g,'')).catch(()=>null);
+      if(d&&d.gloss){lines[i]=d.gloss+' = '+km;ch=true;n++}
+    }
+    if(ch){ta.value=lines.join('\n');updCount()}
+  }catch(e){}
+  autoBusy=false;return n;
+}
 async function fillEnglish(){
+  await autoEn();
   const st=$('fillmsg'),bad=parse().filter(x=>!x.en||!x.km).length;
   if(!bad){st.textContent='';return true}
   st.textContent=bad+' line'+(bad>1?'s are':' is')+' missing the English or the Khmer. Put both on each line, like: water = ទឹក';return false;
