@@ -1279,7 +1279,7 @@ function camUpdate(dt){
   for(let x=d+100;x<=d+560;x+=40){const f=floorAt(x,os);if(f>-Infinity&&f<lo)lo=f}
   const drop=isFinite(lo)?Math.max(0,Math.min(200,camT-lo)):0;
   cam+=((camT-.7*drop)-cam)*Math.min(1,dt*6);
-  petD+=((d-46)-petD)*Math.min(1,dt*9);petY+=((y+(air?4:0))-petY)*Math.min(1,dt*7);
+  petD+=((d-6)-petD)*Math.min(1,dt*22);petY+=((y+B*1.25+(air?4:0))-petY)*Math.min(1,dt*10);
 }
 function loop(now,gen){
   if(gen!==loopGen||mode!=='play')return;
