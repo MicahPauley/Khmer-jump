@@ -84,6 +84,7 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 #cv{width:100%;height:100%;object-fit:fill;display:block}
 .stage .msg{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);background:rgba(10,15,30,.92);padding:12px 16px;border-radius:12px;width:max-content;max-width:92%;text-align:center;font-weight:700;font-family:"Noto Sans Khmer",system-ui,sans-serif}
 .stage .msg:empty{display:none}
+.stage .msg.side{left:auto;right:calc(10px + env(safe-area-inset-right));top:54px;transform:none;max-width:230px;font-size:13px;padding:8px 10px}
 .panel{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;gap:8px;align-items:center;justify-content:flex-start;padding:22px max(10px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(2%,env(safe-area-inset-left));background:linear-gradient(to bottom,rgba(8,12,30,0),rgba(8,12,30,.72) 38%)}
 .word{flex:0 0 17%;font-size:clamp(18px,4.2vh,30px);font-weight:800;line-height:1.1;min-height:0;text-align:left}
 .opts{flex:0 1 68%;display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
@@ -169,6 +170,7 @@ body.noipa .ip{display:none}
     <div class="row" style="margin:12px 0"><button class="pri" id="mpHost">Host a race</button></div>
     <p class="hint">Or join a friend’s race with their 4-letter code:</p>
     <div class="row" style="margin-top:6px"><input id="mpCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" style="text-transform:uppercase;letter-spacing:6px;text-align:center;font-weight:800;max-width:160px"><button id="mpJoin">Join</button></div>
+    <div class="row" style="margin-top:10px"><button class="pri hidden" id="mpSign">Sign in with Google to join</button></div>
     <div class="row" style="margin-top:14px"><button id="mpBack">Close</button></div>
   </div>
   <div id="mpPick" class="hidden" style="flex:1;min-height:0;display:flex;flex-direction:column;gap:8px">
@@ -182,6 +184,7 @@ body.noipa .ip{display:none}
     <div style="text-align:center"><div class="hint">Room code — tell your friends</div><div id="mpCodeBig" style="font-size:42px;line-height:1.1;font-weight:900;letter-spacing:10px"></div><div class="hint" id="mpInfo"></div></div>
     <div class="lvlist" id="mpPlayers"></div>
     <p class="hint hidden" id="mpWait">Waiting for the host to start the race…</p>
+    <div class="row" style="justify-content:center"><button id="mpShare">🔗 Share invite link</button></div>
     <div class="row"><button class="pri" id="mpStart">▶ Start race</button><button id="mpLeave" style="margin-left:auto">Leave</button></div>
   </div>
   <p class="hint" id="mpMsg"></p>
@@ -244,6 +247,7 @@ function fitCanvas(){const vw=Math.max(1,innerWidth),vh=Math.max(1,innerHeight);
 addEventListener('resize',fitCanvas);addEventListener('orientationchange',()=>setTimeout(fitCanvas,200));fitCanvas();
 const SPEED={easy:260,medium:360,hard:500};
 let run=[],obs=[],d=0,v=0,y=0,qi=0,mode='menu',last=0,opts=[],att=0,fail=null,flash=0,shake=0,parts=[],tPlay=0,loopGen=0,pAcc=0;
+var PENDING_ROOM=(function(){try{const r=(new URLSearchParams(location.search).get('room')||'').trim().toUpperCase();return /^[A-Z]{4}$/.test(r)?r:''}catch(e){return''}})();
 var RACE={on:false,players:{},fin:false,win:null,round:0};
 let air=false,fell=false,s=0,s0=0,y0=0,rot=0,coy=0,jumpReq=0;
 
@@ -963,7 +967,7 @@ function msgBtn(text,label,fn){
 function begin(){
   run=RACE.on?seededShuffle(RACE.items,RACE.seed):shuffle(parse().filter(x=>x.en&&x.km));v=SPEED[RACE.on?RACE.diff:diff];LAY.seed=layoutSeed();TH=THEMES[hashStr('th'+LAY.seed)%THEMES.length];obs=plan(run.length);cam=camT=0;petD=-60;petY=0;
   d=0;y=0;air=false;fell=false;rot=0;jumpReq=0;coy=0;parts=[];flash=0;shake=0;att++;tPlay=0;fail=null;pAcc=0;mode='play';
-  $('msg').textContent='';$('pausePanel').classList.add('hidden');
+  $('msg').textContent='';$('msg').className='msg';$('pausePanel').classList.add('hidden');
   setQ(0);last=performance.now();const g=++loopGen;requestAnimationFrame(t=>loop(t,g));
   if(RACE.on)raceTick(true);
 }
@@ -1224,11 +1228,11 @@ function draw(){
     else{const tcol=hexRgb(colorOf(S.eqC).c);ctx.fillStyle='rgba('+tcol[0]+','+tcol[1]+','+tcol[2]+','+(a*.45)+')';const z=B*.55*a;ctx.fillRect(sx(p.x)-z/2,sy(p.y)-B/2-z/2,z,z)}
   }
   if(RACE.on)raceGhosts(sx,tm);
-  ctx.save();ctx.translate(BX,GY-(y-cam)-B/2);ctx.rotate(rot);
+  if(!RACE.spec){ctx.save();ctx.translate(BX,GY-(y-cam)-B/2);ctx.rotate(rot);
   drawBlock(ctx,B,S.eqS,colorOf(S.eqC),tm,mode==='dead'&&!!fail,gearNow());
-  ctx.restore();
+  ctx.restore();}
   for(const o of vis)if(o.rg)for(const r of o.rg)drawRing(r,sx,sy,tm,true);
-  if(S.eqP){drawPet(ctx,S.eqP,sx(petD),sy(petY)-B/2+4+Math.sin(tm*5)*2,tm,26)}
+  if(S.eqP&&!RACE.spec){drawPet(ctx,S.eqP,sx(petD),sy(petY)-B/2+4+Math.sin(tm*5)*2,tm,26)}
   if(run.length&&obs.length){
     const done=Math.max(0,Math.min(1,d/(obs[obs.length-1].x1+B+240)));
     ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(0,0,W,5);ctx.fillStyle='#f28c1b';ctx.fillRect(0,0,W*done,5);
@@ -1237,6 +1241,7 @@ function draw(){
     if(tPlay<3&&mode==='play'){ctx.globalAlpha=Math.min(1,3-tPlay);ctx.font='bold 22px system-ui,sans-serif';ctx.textAlign='center';ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=6;ctx.fillStyle='#fff';ctx.fillText('Tap the right word to JUMP — time it!',W/2,78);ctx.shadowBlur=0;ctx.globalAlpha=1;ctx.textAlign='left'}
   }
   if(RACE.on&&run.length&&obs.length)raceHud();
+  if(RACE.conf&&RACE.conf.length){for(const c of RACE.conf){ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.r);ctx.fillStyle=c.c;ctx.fillRect(-c.w/2,-c.h/2,c.w,c.h);ctx.restore()}}
   if(flash>.01){ctx.fillStyle='rgba(120,230,150,'+flash+')';ctx.fillRect(0,0,W,H)}
   ctx.restore();
 }
@@ -1610,8 +1615,10 @@ function fbSetup(){
     btn.classList.remove('hidden');$('mpbtn').classList.remove('hidden');
     FB.onUser(async u=>{window.MYNAME=u?String(u.displayName||u.email||'Player').split(' ')[0].slice(0,12):'';
       cloud.ok=false;cloud.doc=null;btn.dataset.in=u?'1':'';
-      if(!u){btn.textContent='Sign in';syncMsg('Saved on this device — sign in to save to your account');return}
+      if(!u){btn.textContent='Sign in';syncMsg('Saved on this device — sign in to save to your account');if(PENDING_ROOM){$('mp').classList.remove('hidden');mpView('mpHome');$('mpCode').value=PENDING_ROOM;$('mpSign').classList.remove('hidden');mpMsg('You were invited to race '+PENDING_ROOM+'. Sign in to join.')}return}
       btn.textContent='☁ '+String(u.displayName||u.email||'Signed in').split(' ')[0];
+      $('mpSign').classList.add('hidden');
+      if(PENDING_ROOM){const rc=PENDING_ROOM;PENDING_ROOM='';try{history.replaceState(null,'',location.pathname)}catch(e){}$('mp').classList.remove('hidden');mpView('mpHome');$('mpCode').value=rc;setTimeout(mpJoin,200)}
       syncMsg('☁ Loading your account…');
       try{await cloudStart(FB.doc(u.uid))}catch(e){syncMsg('☁ Could not reach your account — kept on this device')}
     });
@@ -1643,6 +1650,13 @@ function seededShuffle(a,seed){a=a.slice();const r=rnd32(seed);for(let i=a.lengt
 function myName(){return window.MYNAME||'Player'}
 function myInfo(){return{name:myName(),c:S.eqC,s:S.eqS,h:S.eqH||'',g:S.eqG||{},p:S.eqP||'',d:0,y:0,q:0,x:0,a:1}}
 function mpMsg(t){$('mpMsg').textContent=t||''}
+function mpInviteUrl(){return location.origin+location.pathname+'?room='+MP.code}
+$('mpShare').onclick=async()=>{
+  const url=mpInviteUrl(),txt='Join my Khmer Jump race! Room code '+MP.code;
+  try{if(navigator.share){await navigator.share({title:'Khmer Jump race',text:txt,url});return}}catch(e){if(e&&e.name==='AbortError')return}
+  try{await navigator.clipboard.writeText(url);mpMsg('Invite link copied — paste it in a message.')}catch(e){mpMsg('Copy this link: '+url)}
+};
+$('mpSign').onclick=()=>{const l=$('login');if(l)l.click()};
 function mpView(v){for(const k of['mpHome','mpPick','mpLobby'])$(k).classList.toggle('hidden',k!==v)}
 function mpOpen(){
   if(!window.FB||!FB.uid()){$('mp').classList.remove('hidden');mpView('mpHome');mpMsg('Sign in first (button in the top-right corner of the title screen), then come back.');return}
@@ -1752,7 +1766,7 @@ async function mpStart(){
   $('mpStart').disabled=false;
 }
 async function mpStartRace(m){
-  const R=RACE;R.on=true;R.code=MP.code;R.round=m.round|0;R.seed=m.seed|0;R.diff=m.diff||'medium';R.fin=false;R.win=null;R.sig='';R.lt=0;R.note='';
+  const R=RACE;R.on=true;R.code=MP.code;R.round=m.round|0;R.seed=m.seed|0;R.diff=m.diff||'medium';R.fin=false;R.spec=false;R.over=false;R.celeb=false;R.conf=[];R.win=null;R.sig='';R.lt=0;R.note='';$('msg').className='msg';
   R.items=parseText(m.text).filter(x=>x.en&&x.km);R.prevLv=curLv;curLv=null;
   $('mp').classList.add('hidden');$('menu').classList.add('hidden');goFull();
   try{await loadIpa()}catch(e){}
@@ -1773,37 +1787,62 @@ function raceTick(force){
   try{FB.roomUpdate(RACE.code,'players/'+FB.uid(),{d:Math.round(d),y:Math.round(y),q:qi,x:mode==='dead'?1:0,a:att}).catch(()=>{})}catch(e){}
 }
 function raceWin(){
-  mode='dead';fail='';reviewWords(run);learnWords(run);
+  mode='spec';RACE.spec=true;RACE.conf=[];fail='';reviewWords(run);learnWords(run);
   $('q').textContent='🏁 Finished!';$('opts').innerHTML='';
   RACE.fin=true;RACE.sig='';
   const me=FB.uid(),ms=Date.now()-RACE.t0;
   try{
-    FB.roomUpdate(RACE.code,'players/'+me,{fin:{r:RACE.round,ms},d:Math.round(d),x:1}).catch(()=>{});
+    FB.roomUpdate(RACE.code,'players/'+me,{fin:{r:RACE.round,ms,a:att},d:Math.round(d),x:1,a:att}).catch(()=>{});
     const cw=MP.room&&MP.room.winner,np=Object.keys((MP.room&&MP.room.players)||{}).length;
     if(!cw||cw.r!==RACE.round)FB.roomSet(RACE.code,'winner',{r:RACE.round,uid:me,name:myName()}).then(()=>{
       if(np<2)return;const before=S.mpWins|0;S.mpWins=before+1;const got=OUTFITS.find(o=>o.thr>before&&o.thr<=S.mpWins);saveStore();
       RACE.note='🏆 '+S.mpWins+' multiplayer win'+(S.mpWins>1?'s':'')+(got?' — new outfit: '+got.name+'!':'');RACE.sig='';raceStandings();
     }).catch(()=>{});
   }catch(e){}
-  draw();raceStandings();
+  last=performance.now();const gs=++loopGen;requestAnimationFrame(t=>specLoop(t,gs));raceStandings();
+}
+function specLoop(now,gen){
+  if(gen!==loopGen||mode!=='spec')return;
+  const dt=Math.min((now-last)/1000,.05);last=now;const me=FB.uid();
+  let tp=null,best=-1;
+  for(const u in RACE.players){const q=RACE.players[u];if(!q||u===me||(q.fin&&q.fin.r===RACE.round))continue;const x=raceX(q);if(x>best){best=x;tp=q}}
+  if(tp){const k=Math.min(1,dt*4);d+=(best-d)*k;y+=((tp.y||0)-y)*k}
+  cam+=(y-cam)*Math.min(1,dt*5);
+  for(const q of parts){q.l-=dt;if(q.k){q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy-=260*dt}}parts=parts.filter(q=>q.l>0);
+  const cf=RACE.conf||[];for(const c of cf){c.x+=c.vx*dt;c.y+=c.vy*dt;c.vy+=220*dt;c.vx*=.995;c.r+=c.vr*dt}RACE.conf=cf.filter(c=>c.y<H+30);
+  flash*=.9;draw();requestAnimationFrame(t=>specLoop(t,gen));
+}
+function raceCelebrate(n){
+  const cols=['#ffd24a','#ff5a7a','#4ac8ff','#6ee06e','#c27bff','#ffffff','#ff9a3c'];const a=RACE.conf=RACE.conf||[];
+  for(let i=0;i<n;i++)a.push({x:Math.random()*W,y:-10-Math.random()*H*.6,vx:(Math.random()-.5)*120,vy:40+Math.random()*120,r:Math.random()*6,vr:(Math.random()-.5)*10,w:6+Math.random()*6,h:3+Math.random()*4,c:cols[i%cols.length]});
 }
 function fmtMs(ms){const s=ms/1000;return Math.floor(s/60)+':'+(s%60).toFixed(1).padStart(4,'0')}
 function raceStandings(){
   const room=MP.room;if(!room||!RACE.on)return;
   const pl=room.players||{},w=room.winner&&room.winner.r===RACE.round?room.winner:null,me=FB.uid();
-  const fin=Object.keys(pl).filter(u=>pl[u]&&pl[u].fin&&pl[u].fin.r===RACE.round).sort((a,b)=>(a===(w&&w.uid)?-1:b===(w&&w.uid)?1:pl[a].fin.ms-pl[b].fin.ms));
+  const isFin=u=>pl[u]&&pl[u].fin&&pl[u].fin.r===RACE.round;
+  const fin=Object.keys(pl).filter(isFin).sort((a,b)=>(a===(w&&w.uid)?-1:b===(w&&w.uid)?1:pl[a].fin.ms-pl[b].fin.ms));
   const rest=Object.keys(pl).filter(u=>fin.indexOf(u)<0);
-  const sig=JSON.stringify([fin,rest,w&&w.uid,room.meta.state]);if(sig===RACE.sig)return;RACE.sig=sig;
-  const m=$('msg');m.textContent='';
-  const h=document.createElement('div');h.style.fontSize='18px';h.textContent=w?(w.uid===me?'🏆 You won!':'🏁 '+String(w.name||'Someone').slice(0,16)+' won'):'🏁 Finished';m.appendChild(h);
-  fin.forEach((u,i)=>{const r=document.createElement('div');r.style.fontWeight='600';r.textContent=(i+1)+'. '+String(pl[u].name||'Player').slice(0,16)+(u===me?' (you)':'')+' — '+fmtMs(pl[u].fin.ms);m.appendChild(r)});
-  rest.forEach(u=>{const r=document.createElement('div');r.style.opacity='.6';r.textContent='… '+String(pl[u].name||'Player').slice(0,16)+' still racing';m.appendChild(r)});
-  if(RACE.note&&w&&w.uid===me){const n=document.createElement('div');n.style.cssText='margin-top:4px;color:#ffd24a;font-weight:700';n.textContent=RACE.note;m.appendChild(n)}
-  const row=document.createElement('div');row.style.cssText='margin-top:8px;display:flex;gap:8px;justify-content:center';
-  if(MP.host){const b=document.createElement('button');b.className='pri';b.style.padding='8px 14px';b.textContent='Back to lobby';b.onclick=()=>{FB.roomUpdate(MP.code,'meta',{state:'lobby'}).catch(()=>{})};row.appendChild(b)}
-  else{const s=document.createElement('div');s.className='hint';s.style.alignSelf='center';s.textContent='Waiting for the host…';row.appendChild(s)}
-  const lb=document.createElement('button');lb.style.padding='8px 14px';lb.textContent='Leave';lb.onclick=()=>$('menuBtn').onclick();row.appendChild(lb);
-  m.appendChild(row);
+  const over=rest.length===0&&fin.length>0;
+  const sig=JSON.stringify([fin.map(u=>[u,pl[u].fin.ms,pl[u].fin.a]),rest,w&&w.uid,room.meta.state,over]);if(sig===RACE.sig)return;RACE.sig=sig;
+  RACE.over=over;const m=$('msg');m.textContent='';m.className='msg'+(over?'':' side');
+  if(over&&!RACE.celeb){RACE.celeb=true;raceCelebrate(160);setTimeout(()=>raceCelebrate(100),900)}
+  const h=document.createElement('div');h.style.fontSize=over?'20px':'15px';
+  h.textContent=over?(w&&w.uid===me?'🏆 You won the race!':'🏁 Race complete!'):(w?(w.uid===me?'🏆 You won!':'🏁 '+String(w.name||'Someone').slice(0,16)+' won'):'🏁 You finished!');m.appendChild(h);
+  if(!over){const sp=document.createElement('div');sp.className='hint';sp.style.cssText='color:#cfd8ff;font-weight:500;margin-top:2px';sp.textContent='Watching the others finish…';m.appendChild(sp)}
+  const medals=['🥇','🥈','🥉'];
+  const tb=document.createElement('div');tb.style.cssText='margin-top:6px;display:flex;flex-direction:column;gap:3px;text-align:left';
+  const row=(a,b,c,d2,dim,hl)=>{const r=document.createElement('div');r.style.cssText='display:grid;grid-template-columns:26px 1fr auto auto;gap:8px;align-items:center;font-weight:'+(hl?800:600)+';opacity:'+(dim?.6:1)+(hl?';color:#ffd24a':'');[a,b,c,d2].forEach((t,i)=>{const x=document.createElement('span');x.textContent=t;if(i>=2)x.style.textAlign='right';r.appendChild(x)});tb.appendChild(r)};
+  if(over){row('','Player','Time','Tries',true)}
+  fin.forEach((u,i)=>{const n=fin.length,pos=i<3?medals[i]:(i+1)+'.';const nm=String(pl[u].name||'Player').slice(0,12)+(u===me?' (you)':'')+(over&&i===n-1&&n>1?' 🐢':'');row(pos,nm,fmtMs(pl[u].fin.ms),(pl[u].fin.a||pl[u].a||1)+' ✕',false,u===me)});
+  rest.forEach(u=>row('…',String(pl[u].name||'Player').slice(0,12)+(u===me?' (you)':''),'racing',(pl[u].a||1)+' ✕',true,false));
+  m.appendChild(tb);
+  if(RACE.note&&w&&w.uid===me){const n=document.createElement('div');n.style.cssText='margin-top:6px;color:#ffd24a;font-weight:700';n.textContent=RACE.note;m.appendChild(n)}
+  const brow=document.createElement('div');brow.style.cssText='margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap';
+  if(MP.host){const b=document.createElement('button');b.className='pri';b.style.padding='8px 14px';b.textContent='Back to lobby';b.onclick=()=>{FB.roomUpdate(MP.code,'meta',{state:'lobby'}).catch(()=>{})};brow.appendChild(b)}
+  else{const s2=document.createElement('div');s2.className='hint';s2.style.alignSelf='center';s2.textContent='Waiting for the host…';brow.appendChild(s2)}
+  const lb=document.createElement('button');lb.style.padding='8px 14px';lb.textContent='Leave';lb.onclick=()=>$('menuBtn').onclick();brow.appendChild(lb);
+  m.appendChild(brow);
 }
 function mpBackToLobby(){
   RACE.on=false;if(RACE.prevLv!==undefined)curLv=RACE.prevLv;
@@ -1852,7 +1891,7 @@ function raceHud(){
   ctx.beginPath();ctx.roundRect?ctx.roundRect(mx-14,my-8,mw+28,mh+16,10):ctx.rect(mx-14,my-8,mw+28,mh+16);ctx.fill();ctx.stroke();
   ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<=40;i++){const f=i/40,X=mx+mw*f,Y=hy(f);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)}ctx.stroke();
   ctx.font='12px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🚩',mx-2,my+mh-8);ctx.fillText('🏁',mx+mw+2,hy(1)-8);
-  const list=[];for(const u in RACE.players){const p=RACE.players[u];if(p)list.push({u,p,f:u===me?Math.max(0,Math.min(1,d/tot)):raceFrac(p,tot),me:u===me})}
+  const list=[];for(const u in RACE.players){const p=RACE.players[u];if(p)list.push({u,p,f:u===me?(RACE.fin?1:Math.max(0,Math.min(1,d/tot))):raceFrac(p,tot),me:u===me})}
   if(!list.some(q=>q.me))list.push({u:me,p:myInfo(),f:Math.max(0,Math.min(1,d/tot)),me:true});
   list.sort((a,b)=>a.me-b.me);
   for(const q of list){
@@ -1862,7 +1901,9 @@ function raceHud(){
     ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.75)';ctx.lineWidth=2.5;ctx.font='bold '+(q.me?17:15)+'px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';const lt=raceLet(q.u);ctx.strokeText(lt,0,1);ctx.fillText(lt,0,1);
     ctx.restore();
   }
-  const mine=list.find(q=>q.me),rank=1+list.filter(q=>!q.me&&(q.f>mine.f||(RACE.fin&&q.f>=1))).length;
+  const mine=list.find(q=>q.me),let rank=1+list.filter(q=>!q.me&&q.f>mine.f).length;
+  if(RACE.fin){const mf=RACE.players[me]&&RACE.players[me].fin,w0=RACE.win;rank=(w0&&w0.uid===me)?1:mf?1+list.filter(q=>!q.me&&q.p.fin&&q.p.fin.r===RACE.round&&q.p.fin.ms<mf.ms).length:1+list.filter(q=>!q.me&&q.f>=1).length}
+  
   ctx.font='bold 11px system-ui,sans-serif';ctx.textBaseline='alphabetic';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText('You are '+raceLet(me)+' · '+rank+(['st','nd','rd'][rank-1]||'th')+' of '+list.length,W/2,my+mh+19);
   ctx.restore();
   raceFx(tm);
