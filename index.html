@@ -67,6 +67,7 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 #curlv:empty{display:none}
 #wc{position:absolute;top:calc(24px + env(safe-area-inset-top));left:calc(12px + env(safe-area-inset-left));z-index:2;color:#fff;opacity:.8;font-size:12px;font-weight:700;letter-spacing:.3px}
 #musbtn{position:absolute;left:calc(12px + env(safe-area-inset-left));bottom:calc(14px + env(safe-area-inset-bottom));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 12px;font-size:14px}
+#sndbtn{position:absolute;left:calc(64px + env(safe-area-inset-left));bottom:calc(14px + env(safe-area-inset-bottom));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 12px;font-size:14px}
 #fsbtn{position:absolute;right:calc(12px + env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700}
 #audst{color:#fff;opacity:.75;font-size:12px;margin:0}#audst:empty{display:none}
 #login{position:absolute;top:calc(20px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:14px;padding:5px 11px;font-size:12px;font-weight:700}
@@ -109,6 +110,7 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
   <canvas id="tcv"></canvas>
   <div id="wc" title="Words learned"></div>
   <button id="musbtn" aria-label="Toggle music">🎵</button>
+  <button id="sndbtn" aria-label="Toggle all sound">🔊</button>
   <button id="fsbtn" class="hidden">⛶ Full screen</button>
   <button id="login" class="hidden">Sign in</button>
   <div class="title">
@@ -190,8 +192,9 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
   <h2 id="vrref"></h2>
   <p id="vrtext" style="font-size:24px;line-height:2;margin:8px 0 14px"></p>
   <div id="vwpanel" class="hidden" style="background:#fff7dd;border:2px solid #e8a400;border-radius:14px;padding:10px 12px;margin-bottom:10px">
-    <div style="font-size:22px;font-weight:700" id="vwword"></div>
+    <div style="font-size:22px;font-weight:700;font-family:'Noto Sans Khmer','Khmer OS',system-ui,sans-serif" id="vwword"></div>
     <input id="vwen" placeholder="English meaning (optional)" style="width:100%;margin:6px 0">
+    <div id="vwdef" style="font-size:12px;opacity:.8"></div>
     <div class="row"><button class="pri" id="vwsave">Mark as unknown</button><button id="vwrm">I know it</button></div>
   </div>
   <p class="hint" id="vrinfo"></p>
@@ -231,7 +234,7 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
 
 <div id="game" class="screen hidden">
   <div class="stage"><canvas id="cv" width="960" height="270"></canvas><button id="pauseBtn" aria-label="Pause">❚❚</button><div class="msg" id="msg"></div>
-    <div id="pausePanel" class="hidden"><b>Paused</b><button class="pri" id="resumeBtn">▶ Resume</button><button id="ipaBtn">IPA ✓</button><button id="musBtn2">🎵 Music ✓</button><button id="menuBtn">✕ Quit to menu</button><p class="hint" id="audst2" style="margin:4px 0 0;color:#fff"></p></div></div>
+    <div id="pausePanel" class="hidden"><b>Paused</b><button class="pri" id="resumeBtn">▶ Resume</button><button id="ipaBtn">IPA ✓</button><button id="musBtn2">🎵 Music ✓</button><button id="sndBtn2">🔊 Sound ✓</button><button id="menuBtn">✕ Quit to menu</button><p class="hint" id="audst2" style="margin:4px 0 0;color:#fff"></p></div></div>
   <div class="panel"><div class="word" id="q"></div><div class="opts" id="opts"></div></div>
 </div>
 <div id="rot"><span>📱</span>Turn your phone sideways to play</div>
@@ -359,13 +362,14 @@ function layoutSeed(){
 }
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
 
-function tts(t,queue){try{const sy=window.speechSynthesis;if(!sy)return;if(!queue)sy.cancel();
+function tts(t,queue){if(!SND.on)return;try{const sy=window.speechSynthesis;if(!sy)return;if(!queue)sy.cancel();
   const u=new SpeechSynthesisUtterance(t);u.lang='km-KH';const kv=sy.getVoices().filter(x=>/^km/i.test(x.lang)),vo=kv.find(x=>/google/i.test(x.name))||kv[0];if(vo)u.voice=vo;u.rate=.85;sy.speak(u)}catch(e){}}
 function checkVoice(){try{const vs=speechSynthesis.getVoices();$('voice').textContent=vs.length&&!vs.some(x=>/^km/i.test(x.lang))?'Note: this device has no Khmer voice installed, so words may not be spoken aloud. Android: install Khmer in Google Text-to-speech settings.':''}catch(e){}}
 try{speechSynthesis.onvoiceschanged=checkVoice}catch(e){}setTimeout(checkVoice,1000);
 
 
 // ---- home-screen jingle ----
+var SND={on:true};try{SND.on=localStorage.getItem('khmerSnd')!=='0'}catch(e){}
 var MUS={on:true,ctx:null,timer:0,t:0,step:0,playing:false};
 try{MUS.on=localStorage.getItem('khmerMus')!=='0'}catch(e){}
 (function(){
@@ -385,21 +389,22 @@ try{MUS.on=localStorage.getItem('khmerMus')!=='0'}catch(e){}
     MUS.timer=setTimeout(sched,180);
   }
   MUS.start=function(){
-    if(MUS.playing||!MUS.on)return;
+    if(MUS.playing||!MUS.on||!SND.on)return;
     try{
       const AC=window.AudioContext||window.webkitAudioContext;if(!MUS.ctx){MUS.ctx=new AC();MUS.g=MUS.ctx.createGain();MUS.g.gain.value=MUS.v||.12;MUS.g.connect(MUS.ctx.destination)}
       MUS.ctx.resume();MUS.playing=true;MUS.t=MUS.ctx.currentTime+.1;MUS.step=0;sched();
     }catch(e){MUS.playing=false}
   };
   MUS.stop=function(){MUS.playing=false;clearTimeout(MUS.timer);try{if(MUS.ctx&&MUS.ctx.state==='running'){const g=MUS.g.gain;g.setValueAtTime(g.value,MUS.ctx.currentTime);g.linearRampToValueAtTime(0,MUS.ctx.currentTime+.15);setTimeout(()=>{try{if(!MUS.playing){MUS.g.gain.value=MUS.v||.12;MUS.ctx.suspend()}}catch(e){}},200)}}catch(e){}};
-  MUS.sync=function(){const m=$('menu');const show=m&&!m.classList.contains('hidden');MUS.v=show?.12:.04;if(MUS.on&&MUS.armed&&!document.hidden){MUS.start();try{if(MUS.g)MUS.g.gain.setTargetAtTime(MUS.v,MUS.ctx.currentTime,.25)}catch(e){}}else MUS.stop();const b=$('musbtn');if(b)b.textContent=MUS.on?'🎵':'🔇';const b2=$('musBtn2');if(b2)b2.textContent=MUS.on?'🎵 Music ✓':'🔇 Music'};
+  MUS.sync=function(){const m=$('menu');const show=m&&!m.classList.contains('hidden');MUS.v=show?.12:.04;if(MUS.on&&SND.on&&MUS.armed&&!document.hidden){MUS.start();try{if(MUS.g)MUS.g.gain.setTargetAtTime(MUS.v,MUS.ctx.currentTime,.25)}catch(e){}}else MUS.stop();const b=$('musbtn');if(b)b.textContent=MUS.on?'🎵':'🔇';const b2=$('musBtn2');if(b2)b2.textContent=MUS.on?'🎵 Music ✓':'🔇 Music'};
   addEventListener('pointerdown',function(){if(!MUS.armed){MUS.armed=true;MUS.sync()}},{passive:true});
   addEventListener('keydown',function(){if(!MUS.armed){MUS.armed=true;MUS.sync()}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)MUS.stop();else MUS.sync()});
   try{new MutationObserver(MUS.sync).observe($('menu'),{attributes:true,attributeFilter:['class']})}catch(e){}
   $('musBtn2').onclick=e=>{e.stopPropagation();MUS.on=!MUS.on;try{localStorage.setItem('khmerMus',MUS.on?'1':'0')}catch(x){}MUS.armed=true;MUS.sync()};
   $('musbtn').onclick=e=>{e.stopPropagation();MUS.on=!MUS.on;try{localStorage.setItem('khmerMus',MUS.on?'1':'0')}catch(x){}MUS.armed=true;MUS.sync()};
-  MUS.sync();
+  $('sndbtn').onclick=e=>{e.stopPropagation();sndSet(!SND.on)};$('sndBtn2').onclick=e=>{e.stopPropagation();sndSet(!SND.on)};
+  MUS.sync();sndSet(SND.on);
 })();
 var IPA=null,showIpa=true;
 try{showIpa=localStorage.getItem('khmerIpa')!=='0'}catch(e){}
@@ -493,6 +498,25 @@ async function baVoice(x,s,n){
   const all=new Uint8Array(end+(pf?pf.length:0));all.set(v.subarray(0,end));if(pf)all.set(pf,end);
   return BA.voices[n]=[tnPut(x,all),all.length];
 }
+/* Khmer-English dictionary (Headley, Chim & Ok 1997, via PeakSlab km-h97.peak.zst), searched with peak.wasm; loaded the first time a verse word is tapped */
+var DICT={P:null};
+function dictOpen(){
+  if(!DICT.P){DICT.P=(async()=>{
+    const [buf,mod]=await Promise.all([fetch('km-h97.peak.zst').then(r=>{if(!r.ok)throw Error('dict '+r.status);return r.arrayBuffer()}),fetch('peak.wasm').then(r=>{if(!r.ok)throw Error('peak.wasm');return r.arrayBuffer()}).then(b=>WebAssembly.compile(b))]);
+    const x=(await WebAssembly.instantiate(mod,{})).exports,src=x.malloc(buf.byteLength);
+    new Uint8Array(x.memory.buffer).set(new Uint8Array(buf),src);if(x.load_peak(src,buf.byteLength,1))throw Error('load_peak');x.free(src);
+    const Q=512,B=2208+1024,q=x.malloc(Q*2+B),res=q+Q*2;x.peak_init(q,Q,q+Q,Q,res,B);
+    const enc=new TextEncoder(),dec=new TextDecoder(),mem=()=>new Uint8Array(x.memory.buffer);
+    return w=>{mem().set(enc.encode(w+'\0'),q);x.init_search(1,0);const o=[];for(let n;(n=x.get_result(1))>0;)o.push(dec.decode(mem().subarray(res,res+n)));return o};
+  })();DICT.P.catch(()=>{DICT.P=null})}
+  return DICT.P;
+}
+async function dictLook(k){
+  const f=await dictOpen(),r=f(k);if(!r.length)return null;
+  const parts=r[0].split('\t'),doc=new DOMParser().parseFromString((parts[2]||'').replace(/<br>/g,'; '),'text/html'),lis=[...doc.querySelectorAll('li')].map(l=>l.textContent.replace(/\s+/g,' ').trim()).filter(Boolean);
+  const first=(lis[0]||doc.body.textContent||'').replace(/^(n|v|adv|adj|pron|prep|conj|part|cl|num|det|aux|intj|initverb)\.?\s+/,'').split(/[;,.(]/)[0].trim().slice(0,40);
+  return{gloss:first,full:lis.slice(0,3).map(t=>t.slice(0,160)).join(' · ')}
+}
 function baHas(ref){return !!baRef(ref)}
 /* plays one verse (or range); resolves when scheduled, calls st('loading'|'playing'|'done'|'err:'+msg) */
 async function baPlay(ref,st){
@@ -511,8 +535,8 @@ async function baPlay(ref,st){
   let left=(to-from)*160,buf=[],bl=0;
   const sched=final=>{if(!bl)return;const a=new Float32Array(bl);let o=0;for(const q of buf){a.set(q,o);o+=q.length}buf=[];bl=0;
     if(final){const f=Math.min(480,a.length);for(let i=0;i<f;i++)a[a.length-1-i]*=i/f}
-    const b=ctx.createBuffer(1,a.length,16000),n=ctx.createBufferSource();b.copyToChannel(a,0);n.buffer=b;n.connect(ctx.destination);
-    const at=Math.max(tnAt,ctx.currentTime+.05);n.start(at);tnAt=at+b.duration;tnSrcs.push(n);
+    const b=ctx.createBuffer(1,a.length,16000),n=ctx.createBufferSource();b.copyToChannel(a,0);n.buffer=b;n.connect(tnOut());
+    const at=Math.max(tnAt,ctx.currentTime+.05);musDuck(b.duration+.4);n.start(at);tnAt=at+b.duration;tnSrcs.push(n);
     n.onended=()=>{tnSrcs=tnSrcs.filter(z=>z!==n);if(final&&tok===tnTok)st('done')}};
   st('playing');
   for(let k;left>0&&(k=x.tnefar_run(h,16))>0;){
@@ -522,7 +546,14 @@ async function baPlay(ref,st){
   }
   sched(true);
 }
+var tnG=null;
+function tnOut(){const c=tnCtxGet();if(!tnG){tnG=c.createGain();tnG.gain.value=1.25;tnG.connect(c.destination)}return tnG}
+var duckT=0;
+function musDuck(sec){try{if(!MUS.g||!MUS.ctx||!MUS.playing)return;const g=MUS.g.gain,c=MUS.ctx.currentTime;g.cancelScheduledValues(c);g.setTargetAtTime((MUS.v||.1)*.25,c,.04);clearTimeout(duckT);duckT=setTimeout(()=>{try{MUS.g.gain.setTargetAtTime(MUS.v||.1,MUS.ctx.currentTime,.3)}catch(e){}},sec*1000)}catch(e){}}
+function sndSet(on){SND.on=on;try{localStorage.setItem('khmerSnd',on?'1':'0')}catch(e){}if(!on){try{tnStop()}catch(e){}try{speechSynthesis.cancel()}catch(e){}}try{MUS.sync()}catch(e){}
+  for(const id of ['sndbtn','sndBtn2']){const b=document.getElementById(id);if(b)b.textContent=id==='sndbtn'?(on?'🔊':'🔇'):(on?'🔊 Sound ✓':'🔇 Sound off')}}
 function tnSpeak(t,queue){
+  if(!SND.on)return;
   const k=tnKey(t),tok=tnTok;unlockAudio();
   try{tnCtxGet().resume()}catch(e){setAud('🔇 Audio: this browser has no audio output ('+e.message+')');tts(t,queue);return}
   if(!queue){try{speechSynthesis.cancel()}catch(e){}}
@@ -530,14 +561,15 @@ function tnSpeak(t,queue){
     try{
       const pcm=await tnDecode(k);
       if(!queue&&tok!==tnTok)return;
-      const b=tnCtx.createBuffer(1,pcm.length,16000),s=tnCtx.createBufferSource();b.copyToChannel(pcm,0);s.buffer=b;s.connect(tnCtx.destination);
-      const at=Math.max(tnAt,tnCtx.currentTime+.02);s.start(at);tnAt=at+b.duration;tnSrcs.push(s);
+      const b=tnCtx.createBuffer(1,pcm.length,16000),s=tnCtx.createBufferSource();b.copyToChannel(pcm,0);s.buffer=b;s.connect(tnOut());
+      const at=Math.max(tnAt,tnCtx.currentTime+.02);musDuck(b.duration+.3);s.start(at);tnAt=at+b.duration;tnSrcs.push(s);
       s.onended=()=>{tnSrcs=tnSrcs.filter(z=>z!==s)};
       if(audStat.indexOf('🔇')===0||!audStat)setAud('🔊 Audio ready')
     }catch(e){setAud('🔇 Audio problem: '+(e&&e.message||e));tts(t,queue)}
   });
 }
 function speak(t,queue){
+  if(!SND.on)return;
   if(!queue)tnStop();
   if(tnHas(t)){tnSpeak(t,queue);return}
   tts(t,queue);
@@ -1442,13 +1474,13 @@ function vJoin(text,arr){return arr.join(vIsKm(text)?'':' ')}
 function vChunks(text){
   const w=vWords(text),out=[],km=vIsKm(text);
   const len=x=>km?(x.match(/[\u1780-\u17B3]/g)||[]).length:x.replace(/[\u200b.,;:!?“”‘’"'()\s]/g,'').length;
-  const big=km?6:8,budget=km?11:22;
+  const big=km?5:7,budget=km?6:12;
   const stop=x=>/[.,;:!?។៕\u200b]$/.test(x);
   let i=0;
   while(i<w.length){
     if(len(w[i])>=big){out.push(w[i]);i++;continue}
     let g=[w[i]],tot=len(w[i]);i++;
-    while(i<w.length&&g.length<4&&!stop(g[g.length-1])&&len(w[i])<big&&tot+len(w[i])<=budget){g.push(w[i]);tot+=len(w[i]);i++}
+    while(i<w.length&&g.length<2&&!stop(g[g.length-1])&&len(w[i])<big&&tot+len(w[i])<=budget){g.push(w[i]);tot+=len(w[i]);i++}
     out.push(km?g.join(''):g.join(' '));
   }
   return out;
@@ -1500,7 +1532,8 @@ function openVerse(v){
       sp.onclick=()=>{
         t.querySelectorAll('.vw.sel').forEach(x=>x.classList.remove('sel'));sp.classList.add('sel');
         $('vwword').textContent=k;$('vwen').value=(k in v.unk&&v.unk[k])?v.unk[k]:vLookup(k);$('vwrm').classList.toggle('hidden',!(k in v.unk));$('vwpanel').classList.remove('hidden');
-        $('vwsave').textContent=(k in v.unk)?'Save':'Mark as unknown';
+        $('vwsave').textContent=(k in v.unk)?'Save':'Mark as unknown';$('vwdef').textContent='';
+        if(typeof dictLook==='function')dictLook(k).then(d=>{if(d&&$('vwword').textContent===k){$('vwdef').textContent='Dictionary: '+d.full;if(!$('vwen').value)$('vwen').value=d.gloss}}).catch(()=>{});
         $('vwsave').onclick=()=>{v.unk[k]=$('vwen').value.trim();vSaveAll();$('vwpanel').classList.add('hidden');draw()};
         $('vwrm').onclick=()=>{delete v.unk[k];vSaveAll();$('vwpanel').classList.add('hidden');draw()};
       };
@@ -1508,8 +1541,8 @@ function openVerse(v){
     $('vrinfo').textContent=vWords(v.text).length+' words · '+Object.keys(v.unk).length+' marked as unknown · '+(v.prog|0)+'% through'+(v.done?' · ✓ memorized ×'+v.done:'');
   };
   draw();
-  {const lb=$('vrlisten'),au=$('vraud'),ok=baHas(v.ref);lb.classList.toggle('hidden',!ok);au.textContent=ok?'Audio: Khmer Audio Bible ℗ 2024 Davar Partners International; Khmer Standard Version © 2005 United Bible Societies, Bible Society in Cambodia. Free to share, not for sale. The first time you listen it downloads about 36 MB.':'';
-    lb.textContent='🔊 Listen';lb.onclick=()=>{if(lb.dataset.on){tnStop();delete lb.dataset.on;lb.textContent='🔊 Listen';return}
+  {const lb=$('vrlisten'),au=$('vraud'),ok=baHas(v.ref);lb.classList.toggle('hidden',!ok);au.textContent=ok?'Audio: Khmer Audio Bible ℗ 2024 Davar Partners International; Khmer Standard Version © 2005 United Bible Societies, Bible Society in Cambodia. Free to share, not for sale. Word meanings: Cambodian-English Dictionary by Headley, Chim and Ok (1997, Dunwoody Press), via Sealang. The first time you listen it downloads about 36 MB.':'';
+    lb.textContent='🔊 Listen';lb.onclick=()=>{if(!SND.on){au.textContent='Sound is turned off. Turn it on with the 🔊 button on the title screen.';return}if(lb.dataset.on){tnStop();delete lb.dataset.on;lb.textContent='🔊 Listen';return}
       lb.dataset.on=1;baPlay(v.ref,t=>{if(t==='loading')lb.textContent='⏳ Loading audio…';else if(t==='playing')lb.textContent='⏹ Stop';else if(t==='done'){delete lb.dataset.on;lb.textContent='🔊 Listen'}}).catch(e=>{delete lb.dataset.on;lb.textContent='🔊 Listen';au.textContent='Audio isn\u2019t available for this verse here ('+(e&&e.message||e)+').'})}}
   $('vrplay').onclick=()=>{tnStop();$('vread').classList.add('hidden');playVerse(v)};
   $('vread').classList.remove('hidden');
