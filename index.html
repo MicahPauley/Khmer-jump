@@ -281,6 +281,7 @@ async function autoEn(){ /* a line with only Khmer gets its English from the dic
   try{const ta=$('words'),lines=ta.value.split('\n');let ch=false;
     for(let i=0;i<lines.length;i++){
       const raw=lines[i],t=raw.replace(/^\s*[\d\u17E0-\u17E9]+\s*[.)\-:]?\s*/,'').trim();
+      if(t&&!KH.test(t)&&/[A-Za-z]/.test(t)){const en=t.split(/=|\t/)[0].trim(),k2=await alignLook(en).catch(()=>null);if(k2){lines[i]=en+' = '+k2;ch=true;n++}continue}
       if(!t||!KH.test(t)||/[A-Za-z]/.test(t))continue;
       const km=t.split(/=|\t/).map(x=>x.trim()).filter(Boolean).find(x=>KH.test(x));if(!km)continue;
       const d=await dictLook(km.replace(/[\u200b]/g,'')).catch(()=>null);
@@ -516,17 +517,24 @@ async function baVoice(x,s,n){
   return BA.voices[n]=[tnPut(x,all),all.length];
 }
 /* Khmer-English dictionary (Headley, Chim & Ok 1997, via PeakSlab km-h97.peak.zst), searched with peak.wasm; loaded the first time a verse word is tapped */
-var DICT={P:null};
-function dictOpen(){
-  if(!DICT.P){DICT.P=(async()=>{
-    const [buf,mod]=await Promise.all([fetch('km-h97.peak.zst').then(r=>{if(!r.ok)throw Error('dict '+r.status);return r.arrayBuffer()}),fetch('peak.wasm').then(r=>{if(!r.ok)throw Error('peak.wasm');return r.arrayBuffer()}).then(b=>WebAssembly.compile(b))]);
+var DICT={P:null,A:null};
+function dictOpen(){return dictOpenF('P','km-h97.peak.zst',2208)}
+function alignOpen(){return dictOpenF('A','km-align.peak.zst',634)}
+function dictOpenF(slot,file,longest){
+  if(!DICT[slot]){DICT[slot]=(async()=>{
+    const [buf,mod]=await Promise.all([fetch(file).then(r=>{if(!r.ok)throw Error('dict '+r.status);return r.arrayBuffer()}),fetch('peak.wasm').then(r=>{if(!r.ok)throw Error('peak.wasm');return r.arrayBuffer()}).then(b=>WebAssembly.compile(b))]);
     const x=(await WebAssembly.instantiate(mod,{})).exports,src=x.malloc(buf.byteLength);
     new Uint8Array(x.memory.buffer).set(new Uint8Array(buf),src);if(x.load_peak(src,buf.byteLength,1))throw Error('load_peak');x.free(src);
-    const Q=512,B=2208+1024,q=x.malloc(Q*2+B),res=q+Q*2;x.peak_init(q,Q,q+Q,Q,res,B);
+    const Q=512,B=longest+1024,q=x.malloc(Q*2+B),res=q+Q*2;x.peak_init(q,Q,q+Q,Q,res,B);
     const enc=new TextEncoder(),dec=new TextDecoder(),mem=()=>new Uint8Array(x.memory.buffer);
     return w=>{mem().set(enc.encode(w+'\0'),q);x.init_search(1,0);const o=[];for(let n;(n=x.get_result(1))>0;)o.push(dec.decode(mem().subarray(res,res+n)));return o};
-  })();DICT.P.catch(()=>{DICT.P=null})}
-  return DICT.P;
+  })();DICT[slot].catch(()=>{DICT[slot]=null})}
+  return DICT[slot];
+}
+/* English word -> commonest Khmer word (PeakSlab km-align) */
+async function alignLook(en){
+  const f=await alignOpen(),k=String(en).trim().toLowerCase();if(!k)return null;
+  const r=f(k);if(!r.length)return null;const km=r[0].split('\t')[1];return km&&/[\u1780-\u17FF]/.test(km)?km:null
 }
 async function dictLook(k){
   const f=await dictOpen(),r=f(k);if(!r.length)return null;
