@@ -1275,8 +1275,8 @@ var BASECOL={id:'orange',name:'Classic Orange',c:'#f28c1b'};
 var MAXP=10,NCOL=5;
 function hslHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));return '#'+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('')}
 var PAL=[['Ruby','#e11d48'],['Emerald','#10b981'],['Cobalt','#1d4ed8'],['Violet','#8b5cf6']];
-var COLS=PAL.map(([n,c],i)=>({id:'c'+(i+1),name:n,c,thr:200*(i+1)}));
-COLS.push({id:'c'+NCOL,name:'Shiny Diamond',c:'#9be7ff',hi:'#ffffff',lo:'#4aa8d8',shine:1,thr:200*NCOL});
+var COLS=PAL.map(([n,c],i)=>({id:'c'+(i+1),name:n,c,thr:[75,250,600,1300][i]}));
+COLS.push({id:'c'+NCOL,name:'Shiny Diamond',c:'#9be7ff',hi:'#ffffff',lo:'#4aa8d8',shine:1,thr:3000});
 var S={learned:{},base:0,prestige:0,eqC:'orange',eqS:'square',eqH:'',eqG:{},mpWins:0,reviewed:0,eqP:'',vmem:0,eqA:''};
 try{const r=JSON.parse(localStorage.getItem('khmerStore')||'null');if(r&&typeof r==='object'){S.learned=Object.assign({},r.learned||{});S.base=r.base|0;S.prestige=Math.min(MAXP,r.prestige|0);S.eqC=r.eqC||'orange';S.eqS=r.eqS||'square';S.eqH=r.eqH||'';S.eqG=(r.eqG&&typeof r.eqG==='object')?r.eqG:{};S.mpWins=r.mpWins|0;S.reviewed=r.reviewed|0;S.eqP=r.eqP||'';S.vmem=r.vmem|0;S.eqA=r.eqA||''}}catch(e){}
 function learnedN(){return Object.keys(S.learned).length}
@@ -1304,13 +1304,17 @@ function blockPath(c,s,shape){
   else c.rect(-h,-h,s,s);
 }
 // ---- hats (words milestones) and outfits (multiplayer wins) ----
-var HATS=[{id:'cap',name:'Baseball cap',thr:100},{id:'umb',name:'Umbrella hat',thr:300},{id:'visor',name:'Sun visor',thr:500},{id:'ten',name:'Ten-gallon hat',thr:700},{id:'crown',name:'Crown',thr:900}];
-var OUTFITS=[{id:'sneak',name:'Sneakers',slot:'shoes',thr:5},{id:'spiky',name:'Spiky hair',slot:'hair',thr:10},{id:'tank',name:'Tank top',slot:'top',thr:20},{id:'chain',name:'Gold chain',slot:'neck',thr:30},{id:'shades',name:'Sunglasses',slot:'face',thr:40},{id:'denim',name:'Denim jacket',slot:'top',thr:50},{id:'mohawk',name:'Mohawk',slot:'hair',thr:60},{id:'scarf',name:'Scarf',slot:'neck',thr:70},{id:'boots',name:'Cowboy boots',slot:'shoes',thr:80},{id:'cape',name:'Hero cape',slot:'back',thr:90},{id:'wings',name:'Angel wings',slot:'back',thr:100}];
+var HATS=[{id:'cap',name:'Baseball cap',thr:25},{id:'umb',name:'Umbrella hat',thr:150},{id:'visor',name:'Sun visor',thr:400},{id:'ten',name:'Ten-gallon hat',thr:900},{id:'crown',name:'Crown',thr:1800}];
+var OUTFITS=[{id:'sneak',name:'Sneakers',slot:'shoes',thr:1},{id:'spiky',name:'Spiky hair',slot:'hair',thr:2},{id:'tank',name:'Tank top',slot:'top',thr:3},{id:'chain',name:'Gold chain',slot:'neck',thr:5},{id:'shades',name:'Sunglasses',slot:'face',thr:8},{id:'denim',name:'Denim jacket',slot:'top',thr:12},{id:'mohawk',name:'Mohawk',slot:'hair',thr:18},{id:'scarf',name:'Scarf',slot:'neck',thr:26},{id:'boots',name:'Cowboy boots',slot:'shoes',thr:38},{id:'cape',name:'Hero cape',slot:'back',thr:55},{id:'wings',name:'Angel wings',slot:'back',thr:100}];
 function hatById(id){return HATS.find(x=>x.id===id)||null}
 function outById(id){return OUTFITS.find(x=>x.id===id)||null}
 function hatUnlocked(h){return S.prestige>0||prog()>=h.thr}
 // ---- companions (words reviewed) ----
-var PETS=[['banana','🍌','Banana'],['monkey','🐒','Monkey'],['star','⭐','Little star'],['plank','🪵','Plank of wood'],['angel','😇','Angel'],['giraffe','🦒','Giraffe'],['elephant','🐘','Elephant'],['gnome','','Gnome'],['frog','🐸','Frog'],['turtle','🐢','Turtle'],['penguin','🐧','Penguin'],['fox','🦊','Fox'],['panda','🐼','Panda'],['owl','🦉','Owl'],['butterfly','🦋','Butterfly'],['dolphin','🐬','Dolphin'],['octopus','🐙','Octopus'],['flamingo','🦩','Flamingo'],['peacock','🦚','Peacock'],['kangaroo','🦘','Kangaroo'],['wolf','🐺','Wolf'],['lion','🦁','Lion'],['tiger','🐯','Tiger'],['eagle','🦅','Eagle'],['shark','🦈','Shark'],['whale','🐳','Whale'],['fairy','🧚','Fairy'],['unicorn','🦄','Unicorn'],['genie','🧞','Genie'],['robot','🤖','Robot'],['alien','👽','Alien'],['ufo','🛸','Flying saucer'],['rocket','🚀','Rocket'],['comet','☄️','Comet'],['planet','🪐','Ringed planet'],['moon','🌙','Moon'],['sun','🌞','Sun'],['rainbow','🌈','Rainbow'],['orb','🔮','Crystal ball'],['wizard','🧙','Wizard'],['trex','🦖','T-Rex'],['sauropod','🦕','Long-neck dino'],['dragon','🐉','Dragon'],['gem','💎','Gem'],['fire','🔥','Fire spirit'],['bolt','⚡','Lightning'],['crown','👑','Crown'],['trophy','🏆','Trophy'],['glow','🌟','Glowing star'],['dragonking','🐲','Dragon king']].map((q,i)=>({id:q[0],e:q[1],name:q[2],thr:1000*(i+1)}));
+function fmtK(n){return n>=1000?(Math.round(n/100)/10)+'k':String(n)}
+function nice2(x){const p=Math.pow(10,Math.floor(Math.log10(x))-1);return Math.round(x/p)*p}
+function scaleThr(n,first,pen){const o=[];for(let i=0;i<n-1;i++){let t=nice2(first*Math.pow(pen/first,i/(n-2)));if(o.length&&t<=o[o.length-1])t=o[o.length-1]+Math.max(1,Math.round(o[o.length-1]*.05));o.push(t)}o.push(pen*2);return o}
+var PET_T=scaleThr(50,100,25000);
+var PETS=[['banana','🍌','Banana'],['monkey','🐒','Monkey'],['star','⭐','Little star'],['plank','🪵','Plank of wood'],['angel','😇','Angel'],['giraffe','🦒','Giraffe'],['elephant','🐘','Elephant'],['gnome','','Gnome'],['frog','🐸','Frog'],['turtle','🐢','Turtle'],['penguin','🐧','Penguin'],['fox','🦊','Fox'],['panda','🐼','Panda'],['owl','🦉','Owl'],['butterfly','🦋','Butterfly'],['dolphin','🐬','Dolphin'],['octopus','🐙','Octopus'],['flamingo','🦩','Flamingo'],['peacock','🦚','Peacock'],['kangaroo','🦘','Kangaroo'],['wolf','🐺','Wolf'],['lion','🦁','Lion'],['tiger','🐯','Tiger'],['eagle','🦅','Eagle'],['shark','🦈','Shark'],['whale','🐳','Whale'],['fairy','🧚','Fairy'],['unicorn','🦄','Unicorn'],['genie','🧞','Genie'],['robot','🤖','Robot'],['alien','👽','Alien'],['ufo','🛸','Flying saucer'],['rocket','🚀','Rocket'],['comet','☄️','Comet'],['planet','🪐','Ringed planet'],['moon','🌙','Moon'],['sun','🌞','Sun'],['rainbow','🌈','Rainbow'],['orb','🔮','Crystal ball'],['wizard','🧙','Wizard'],['trex','🦖','T-Rex'],['sauropod','🦕','Long-neck dino'],['dragon','🐉','Dragon'],['gem','💎','Gem'],['fire','🔥','Fire spirit'],['bolt','⚡','Lightning'],['crown','👑','Crown'],['trophy','🏆','Trophy'],['glow','🌟','Glowing star'],['dragonking','🐲','Dragon king']].map((q,i)=>({id:q[0],e:q[1],name:q[2],thr:PET_T[i]}));
 function petById(id){return PETS.find(x=>x.id===id)||null}
 function petUnlocked(p){return(S.reviewed|0)>=p.thr}
 function reviewWords(list){let n=0;for(const x of list){if(S.learned[(x.km||'').trim()])n++}if(n){S.reviewed=(S.reviewed|0)+n;saveStore()}return n}
@@ -1418,10 +1422,10 @@ $('vsave').onclick=()=>{
   if(vWords(text).length<3){$('vmsg').textContent='Paste at least a few words of the verse.';return}
   vAdd(ref,text);$('vref').value='';$('vtext').value='';$('vmsg').textContent='Saved ✓';vRender();vReroll();vRecRender();
 };
-// auras: one every 500 verse words, up to 25,000
+// auras: get harder as you go, last one at 25,000
 var AHUE=[['Ruby','#ff3b5c'],['Amber','#ffa62e'],['Gold','#ffd84a'],['Lime','#9be83a'],['Emerald','#2ee58a'],['Aqua','#2ee6e6'],['Sky','#4aa8ff'],['Violet','#9a6bff'],['Magenta','#ff5ae0'],['Pearl','#eef0ff']];
 var ASTY=[['Glow','glow'],['Halo','ring'],['Orbit','orbit'],['Flare','rays'],['Nova','nova']];
-var AURAS=[];for(let i=0;i<50;i++){const h=AHUE[i%10],s=ASTY[Math.floor(i/10)];AURAS.push({id:'a'+(i+1),name:h[0]+' '+s[0],c:h[1],st:s[1],thr:500*(i+1)})}
+var AUR_T=scaleThr(50,100,12500);var AURAS=[];for(let i=0;i<50;i++){const h=AHUE[i%10],s=ASTY[Math.floor(i/10)];AURAS.push({id:'a'+(i+1),name:h[0]+' '+s[0],c:h[1],st:s[1],thr:AUR_T[i]})}
 function auraById(id){return AURAS.find(a=>a.id===id)||null}
 function auraUnlocked(a){return(S.vmem|0)>=a.thr}
 function drawAura(c,id,s,t){
@@ -1446,13 +1450,13 @@ function stRenderVS(){
   if(nxt){box.appendChild(stEl('p','hint','Next aura: '+nxt.name+' at '+nxt.thr.toLocaleString()+' words ('+(nxt.thr-w).toLocaleString()+' to go)'));
     const lo=prv?prv.thr:0,bar=stEl('div','pbar'),fl=document.createElement('i');fl.style.width=Math.max(0,Math.min(100,100*(w-lo)/(nxt.thr-lo)))+'%';bar.appendChild(fl);box.appendChild(bar)}
   else box.appendChild(stEl('p','hint','You have every aura! 🎉'));
-  box.appendChild(stEl('p','hint','Finish a verse in 📖 Verses and every word counts as memorized. A new aura surrounds your block every 500 words, up to 25,000. Tap one to wear it, tap again to take it off.'));
+  box.appendChild(stEl('p','hint','Finish a verse in 📖 Verses and every word counts as memorized. The first auras come quickly, then each one takes longer, and the last one (25,000 words) is a huge climb. Tap one to wear it, tap again to take it off.'));
   const g=stEl('div','wgrid');
   for(const a of AURAS){
     const ok=auraUnlocked(a),b=stEl('button','wbtn pet'+(S.eqA===a.id?' sel':'')+(ok?'':' lk'));
     b.title=a.name+' · '+a.thr.toLocaleString()+' words';b.setAttribute('aria-label',a.name);
     const cv=document.createElement('canvas');cv.width=cv.height=56;cv.className='stcv';{const c=cv.getContext('2d');c.fillStyle='#1b2038';c.fillRect(0,0,56,56);c.translate(28,28);try{drawBlock(c,18,'square',colorOf(S.eqC),1,false,{a:a.id,g:{},h:''})}catch(e){}}
-    b.appendChild(cv);b.appendChild(stEl('span','lbl'+(ok?' got':''),(ok?'✓ ':'')+(a.thr/1000)+'k'));
+    b.appendChild(cv);b.appendChild(stEl('span','lbl'+(ok?' got':''),(ok?'✓ ':'')+fmtK(a.thr)));
     b.disabled=!ok;b.onclick=()=>{S.eqA=S.eqA===a.id?'':a.id;saveStore();stRender()};g.appendChild(b);
   }
   box.appendChild(g);
@@ -1481,14 +1485,14 @@ function stRenderRV(){
     box.appendChild(stEl('p','hint','Next companion: '+(nxt.e||'🧙')+' '+nxt.name+' at '+nxt.thr.toLocaleString()+' words ('+(nxt.thr-w).toLocaleString()+' to go)'));
     const lo=prv?prv.thr:0,bar=stEl('div','pbar'),fl=document.createElement('i');fl.style.width=Math.max(0,Math.min(100,100*(w-lo)/(nxt.thr-lo)))+'%';bar.appendChild(fl);box.appendChild(bar);
   }else box.appendChild(stEl('p','hint','You have every companion! 🎉'));
-  box.appendChild(stEl('p','hint','Finish a level you have already learned and every word you already knew counts as reviewed. A new companion joins you every 1,000 words, up to 50,000. Tap one to bring it along, tap again to send it home.'));
+  box.appendChild(stEl('p','hint','Finish a level you have already learned and every word you already knew counts as reviewed. The first companions come quickly, then each one takes longer, and the last one (50,000 words) is a huge climb. Tap one to bring it along, tap again to send it home.'));
   const g=stEl('div','wgrid');
   for(const p of PETS){
     const ok=petUnlocked(p),b=stEl('button','wbtn pet'+(S.eqP===p.id?' sel':'')+(ok?'':' lk'));
     b.title=p.name+' · '+p.thr.toLocaleString()+' words';b.setAttribute('aria-label',p.name);
     const cv=document.createElement('canvas');cv.width=cv.height=56;cv.className='stcv';{const c=cv.getContext('2d');drawPet(c,p.id,28,30,0,30)}
     b.appendChild(cv);
-    b.appendChild(stEl('span','lbl'+(ok?' got':''),(ok?'✓ ':'')+(p.thr/1000)+'k'));
+    b.appendChild(stEl('span','lbl'+(ok?' got':''),(ok?'✓ ':'')+fmtK(p.thr)));
     b.disabled=!ok;b.onclick=()=>{S.eqP=S.eqP===p.id?'':p.id;saveStore();stRender()};g.appendChild(b);
   }
   box.appendChild(g);
