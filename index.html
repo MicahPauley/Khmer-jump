@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Khmer Jump</title>
+<title>ខ្មែរលោត · Khmer Jump</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Khmer Jump">
+<meta name="apple-mobile-web-app-title" content="ខ្មែរលោត">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#14213d">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -67,6 +67,11 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 #curlv:empty{display:none}
 #wc{position:absolute;top:calc(24px + env(safe-area-inset-top));left:calc(12px + env(safe-area-inset-left));z-index:2;color:#fff;opacity:.8;font-size:12px;font-weight:700;letter-spacing:.3px}
 #musbtn{position:absolute;left:calc(12px + env(safe-area-inset-left));bottom:calc(14px + env(safe-area-inset-bottom));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 12px;font-size:14px}
+body.km *{letter-spacing:0!important}
+body.km,body.km *{font-family:'Noto Sans Khmer','Khmer OS','Leelawadee UI',system-ui,sans-serif}
+.logo{font-family:'Noto Sans Khmer','Khmer OS','Leelawadee UI',system-ui,sans-serif}
+.logo{letter-spacing:0!important}
+#langbtn{letter-spacing:0;font-family:'Noto Sans Khmer','Khmer OS','Leelawadee UI',system-ui,sans-serif;position:absolute;left:calc(116px + env(safe-area-inset-left));bottom:calc(14px + env(safe-area-inset-bottom));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:700}
 #sndbtn{position:absolute;left:calc(64px + env(safe-area-inset-left));bottom:calc(14px + env(safe-area-inset-bottom));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 12px;font-size:14px}
 #fsbtn{position:absolute;right:calc(12px + env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700}
 #audst{color:#fff;opacity:.75;font-size:12px;margin:0}#audst:empty{display:none}
@@ -111,11 +116,12 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
   <div id="wc" title="Words learned"></div>
   <button id="musbtn" aria-label="Toggle music">🎵</button>
   <button id="sndbtn" aria-label="Toggle all sound">🔊</button>
+  <button id="langbtn" aria-label="Khmer or English">ខ្មែរ</button>
   <button id="fsbtn" class="hidden">⛶ Full screen</button>
   <button id="login" class="hidden">Sign in</button>
   <div class="title">
-    <h1 class="logo">KHMER JUMP</h1>
-    <p class="sub">ខ្មែរ · Learn words, dodge spikes</p>
+    <h1 class="logo">ខ្មែរលោត</h1>
+    <p class="sub">Khmer Jump · Learn words, dodge spikes</p>
     <div class="chips" id="diff">
       <button data-d="easy">Easy</button>
       <button data-d="medium" class="sel">Medium</button>
@@ -234,7 +240,7 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
 
 <div id="game" class="screen hidden">
   <div class="stage"><canvas id="cv" width="960" height="270"></canvas><button id="pauseBtn" aria-label="Pause">❚❚</button><div class="msg" id="msg"></div>
-    <div id="pausePanel" class="hidden"><b>Paused</b><button class="pri" id="resumeBtn">▶ Resume</button><button id="ipaBtn">IPA ✓</button><button id="musBtn2">🎵 Music ✓</button><button id="sndBtn2">🔊 Sound ✓</button><button id="menuBtn">✕ Quit to menu</button><p class="hint" id="audst2" style="margin:4px 0 0;color:#fff"></p></div></div>
+    <div id="pausePanel" class="hidden"><b>Paused</b><button class="pri" id="resumeBtn">▶ Resume</button><button id="ipaBtn">IPA ✓</button><button id="musBtn2">🎵 Music ✓</button><button id="langBtn2">ខ្មែរ</button><button id="sndBtn2">🔊 Sound ✓</button><button id="menuBtn">✕ Quit to menu</button><p class="hint" id="audst2" style="margin:4px 0 0;color:#fff"></p></div></div>
   <div class="panel"><div class="word" id="q"></div><div class="opts" id="opts"></div></div>
 </div>
 <div id="rot"><span>📱</span>Turn your phone sideways to play</div>
@@ -387,6 +393,70 @@ try{speechSynthesis.onvoiceschanged=checkVoice}catch(e){}setTimeout(checkVoice,1
 
 
 // ---- home-screen jingle ----
+/* ---- Khmer interface toggle: translates the app's own words into Khmer (original English kept so it can switch back) ---- */
+var KMUI={on:false,rec:new WeakMap(),map:{
+'Add a verse':'បន្ថែមខគម្ពីរ','Back':'ត្រឡប់ក្រោយ','Close':'បិទ','Done':'រួចរាល់','Easy':'ស្រួល','Medium':'មធ្យម','Hard':'ពិបាក','🔥 Extreme':'🔥 ខ្លាំងបំផុត',
+'▶ PLAY':'▶ លេង','▶ Play':'▶ លេង','▶ Resume':'▶ បន្ត','▶ Start race':'▶ ចាប់ផ្តើមប្រណាំង','★ Levels':'★ កម្រិត','📖 Verses':'📖 ខគម្ពីរ','🏅 Accolades':'🏅 ពានរង្វាន់','🏅 Accolades ·':'🏅 ពានរង្វាន់ ·',
+'👥 Multiplayer':'👥 លេងច្រើននាក់','👥 Multiplayer · Live race':'👥 លេងច្រើននាក់ · ប្រណាំងផ្ទាល់','⛶ Full screen':'⛶ ពេញអេក្រង់','✕ Quit to menu':'✕ ចេញទៅម៉ឺនុយ','Paused':'ផ្អាក',
+'Leave':'ចាកចេញ','Join':'ចូលរួម','Host a race':'រៀបចំការប្រណាំង','Sign in':'ចូលគណនី','Sign in with Google to join':'ចូលគណនីដោយ Google ដើម្បីចូលរួម',
+'Mark as unknown':'សម្គាល់ថាមិនទាន់ស្គាល់','I know it':'ខ្ញុំដឹងហើយ','Save verse':'រក្សាទុកខគម្ពីរ','💾 Save as level':'💾 រក្សាទុកជាកម្រិត','＋ New level':'＋ កម្រិតថ្មី',
+'My levels':'កម្រិតរបស់ខ្ញុំ','My words':'ពាក្យរបស់ខ្ញុំ','✎ My words':'✎ ពាក្យរបស់ខ្ញុំ','Words':'ពាក្យ','🔁 Reviews':'🔁 ការពិនិត្យឡើងវិញ','🏆 Wins':'🏆 ជ័យជម្នះ',
+'🔊 Listen':'🔊 ស្តាប់','⏹ Stop':'⏹ ឈប់','⏳ Loading audio…':'⏳ កំពុងផ្ទុកសំឡេង…','🔊 Sound ✓':'🔊 សំឡេង ✓','🔇 Sound off':'🔇 បិទសំឡេង','🎵 Music ✓':'🎵 តន្ត្រី ✓','🔇 Music':'🔇 តន្ត្រី',
+'🎲 New suggestions':'🎲 សំណើថ្មី','🎲 Random 20 words':'🎲 ពាក្យចៃដន្យ ២០','🎲 Suggested verses':'🎲 ខគម្ពីរណែនាំ','🔗 Share invite link':'🔗 ចែករំលែកតំណអញ្ជើញ','📖 Host a verse race':'📖 រៀបចំការប្រណាំងខគម្ពីរ',
+'Copy my progress':'ចម្លងវឌ្ឍនភាពរបស់ខ្ញុំ','Load pasted progress':'ផ្ទុកវឌ្ឍនភាពដែលបានបិទភ្ជាប់','Move your progress':'ផ្លាស់ទីវឌ្ឍនភាពរបស់អ្នក',
+'Room code — tell your friends':'លេខកូដបន្ទប់ — ប្រាប់មិត្តភក្តិរបស់អ្នក','Waiting for the host to start the race…':'កំពុងរង់ចាំម្ចាស់បន្ទប់ចាប់ផ្តើមការប្រណាំង…','Turn your phone sideways to play':'បង្វិលទូរសព្ទរបស់អ្នកដោយផ្ដេកដើម្បីលេង',
+'One per line:':'មួយបន្ទាត់ក្នុងមួយពាក្យ៖','English = Khmer':'អង់គ្លេស = ខ្មែរ','Choose the speed and the level for this race:':'ជ្រើសរើសល្បឿន និងកម្រិតសម្រាប់ការប្រណាំងនេះ៖',
+'Or join a friend’s race with their 4-letter code:':'ឬចូលរួមការប្រណាំងរបស់មិត្តភក្តិដោយប្រើលេខកូដ ៤ អក្សររបស់ពួកគេ៖','Or race to finish a Bible verse in order — everyone gets the same verse:':'ឬប្រណាំងបញ្ចប់ខគម្ពីរតាមលំដាប់ — អ្នករាល់គ្នាទទួលបានខគម្ពីរដូចគ្នា៖',
+'No levels yet. Tap “New level”, enter your words, then “Save as level”.':'មិនទាន់មានកម្រិតទេ។ ចុច «កម្រិតថ្មី» បញ្ចូលពាក្យរបស់អ្នក រួចចុច «រក្សាទុកជាកម្រិត»។',
+'No verses saved yet. Add one below or pick a suggestion.':'មិនទាន់មានខគម្ពីរដែលបានរក្សាទុកទេ។ បន្ថែមមួយខាងក្រោម ឬជ្រើសរើសសំណើ។',
+'Saved word lists. Tap ▶ to play one again any time.':'បញ្ជីពាក្យដែលបានរក្សាទុក។ ចុច ▶ ដើម្បីលេងម្តងទៀតបានគ្រប់ពេល។',
+'You have no saved levels yet. Save one under ★ Levels first.':'អ្នកមិនទាន់មានកម្រិតដែលបានរក្សាទុកទេ។ សូមរក្សាទុកមួយនៅក្រោម ★ កម្រិត សិន។',
+"Read it through first. Tap any word you don't know yet to highlight it and add its English. While you play, that English shows under the choices. Then press Play.":'សូមអានឱ្យចប់សិន។ ចុចពាក្យណាដែលអ្នកមិនទាន់ស្គាល់ ដើម្បីបន្លិច និងបន្ថែមអត្ថន័យអង់គ្លេសរបស់វា។ ពេលលេង អត្ថន័យនោះនឹងបង្ហាញនៅក្រោមជម្រើស។ បន្ទាប់មកចុចលេង។',
+'Race up to 4 players on the same level at the same time. Everyone needs to be signed in. The first to the finish wins.':'ប្រណាំងរហូតដល់ ៤ នាក់លើកម្រិតតែមួយក្នុងពេលតែមួយ។ អ្នករាល់គ្នាត្រូវចូលគណនី។ អ្នកដល់ទីបញ្ចប់មុនគេឈ្នះ។',
+'Save a Khmer verse (or several verses) and play it word by word, always in order, until you can say it from memory. Each choice is a few words: 3 to 4 short words together, or just one when the word is long.':'រក្សាទុកខគម្ពីរខ្មែរ (ឬច្រើនខ) ហើយលេងវាម្តងមួយពាក្យ តាមលំដាប់ជានិច្ច រហូតដល់អ្នកអាចសូត្រពីចិត្តបាន។ ជម្រើសនីមួយៗមាន ១ ឬ ២ ពាក្យខ្លី ឬមួយពាក្យប្រសិនបើពាក្យវែង។',
+'Khmer Jump · Learn words, dodge spikes':'ខ្មែរលោត · រៀនពាក្យ ចៀសបន្លា','Level name (optional)':'ឈ្មោះកម្រិត (ស្រេចចិត្ត)','English meaning (optional)':'អត្ថន័យអង់គ្លេស (ស្រេចចិត្ត)','Paste the verse in Khmer here…':'បិទភ្ជាប់ខគម្ពីរជាភាសាខ្មែរនៅទីនេះ…',
+'Tap the right word to JUMP — time it!':'ចុចពាក្យត្រូវដើម្បីលោត — ចាប់ពេលវេលាឱ្យត្រូវ!','🎉 Level complete!':'🎉 បញ្ចប់កម្រិតហើយ!','Play again':'លេងម្តងទៀត','Restart':'ចាប់ផ្តើមឡើងវិញ','Hit a spike!':'ប៉ះបន្លា!','Hit the wall!':'ប៉ះជញ្ជាំង!',
+'Done!':'រួចរាល់!','🏁':'🏁','Levels are saved on this device':'កម្រិតត្រូវបានរក្សាទុកក្នុងឧបករណ៍នេះ','Saved on this device — sign in to save to your account':'បានរក្សាទុកក្នុងឧបករណ៍នេះ — ចូលគណនីដើម្បីរក្សាទុកក្នុងគណនីរបស់អ្នក',
+'This site and the claude.ai version each keep their own saves. Tap “Copy my progress”, open the game on the other site or phone, paste it in here and tap “Load pasted progress”. Nothing is lost or doubled.':'គេហទំព័រនេះ និងកំណែ claude.ai រក្សាទុកដោយឡែកពីគ្នា។ ចុច «ចម្លងវឌ្ឍនភាពរបស់ខ្ញុំ» បើកហ្គេមនៅគេហទំព័រ ឬទូរសព្ទផ្សេង បិទភ្ជាប់នៅទីនេះ រួចចុច «ផ្ទុកវឌ្ឍនភាពដែលបានបិទភ្ជាប់»។ គ្មានអ្វីបាត់ ឬស្ទួនទេ។',
+'Finish a level 100% and every new word in it counts as learned. Replaying a level never adds to your count. A new color unlocks at 200, 400, 600 and 800 words, then Shiny Diamond at 1,000, and you earn a hat halfway to each color (100, 300, 500, 700 and 900). At 1,000 you can prestige for a new shape, and the colors start over.':'បញ្ចប់កម្រិត ១០០% ហើយគ្រប់ពាក្យថ្មីក្នុងនោះរាប់ជាបានរៀន។ ការលេងកម្រិតម្តងទៀតមិនបន្ថែមចំនួនរបស់អ្នកទេ។ ពណ៌ថ្មីដោះសោនៅ ២០០ ៤០០ ៦០០ និង ៨០០ ពាក្យ រួចពេជ្រភ្លឺនៅ ១,០០០ ហើយអ្នកទទួលបានមួកពាក់កណ្តាលផ្លូវទៅរកពណ៌នីមួយៗ។ នៅ ១,០០០ អ្នកអាចឡើងលំដាប់ដើម្បីបានរូបរាងថ្មី ហើយពណ៌ចាប់ផ្តើមឡើងវិញ។'
+},pat:[
+[/^★ Levels \((\d+)\)$/,'★ កម្រិត ($1)'],[/^✎ My words \((\d+)\)$/,'✎ ពាក្យរបស់ខ្ញុំ ($1)'],[/Audio ready — .*$/,'សំឡេងរួចរាល់ — បើអ្នកមិនឮអ្វីទេ សូមបិទកុងតាក់ស្ងាត់ ហើយបង្កើនសំឡេង'],[/\bjumps?\b/,'លោត'],[/(\d+) with recorded audio/,'$1 មានសំឡេងថតទុក'],[/(\d+) need English/,'$1 ត្រូវការអង់គ្លេស'],[/(\d+) need Khmer/,'$1 ត្រូវការខ្មែរ'],[/\bneed at least 3\b/,'ត្រូវការយ៉ាងតិច ៣'],[/^Wrong! /,'ខុស! '],[/\battempt (\d+)/,'ការព្យាយាម $1'],[/(\d+) words? memorized/,'$1 ពាក្យបានចងចាំ'],[/(\d+) words\b/,'$1 ពាក្យ'],[/% through/,'% បានដល់'],[/marked as unknown/,'បានសម្គាល់ថាមិនស្គាល់'],[/^Fell in the /,'ធ្លាក់ក្នុង '],
+[/^Not quite\./,'មិនទាន់ត្រូវទេ។'],[/^Verse complete!/,'បញ្ចប់ខគម្ពីរហើយ!'],[/Already memorized, no new words counted,/,'បានចងចាំរួចហើយ មិនរាប់ពាក្យថ្មីទេ,']
+],sty:{}};
+function kmT(s){
+  const t=s.trim();if(!t)return s;const lead=s.slice(0,s.indexOf(t)),trail=s.slice(s.indexOf(t)+t.length);
+  if(KMUI.map[t])return lead+KMUI.map[t]+trail;
+  let r=t,ch=false;for(const [re,to] of KMUI.pat){if(re.test(r)){r=r.replace(re,to);ch=true}}
+  return ch?lead+r+trail:s;
+}
+function kmNode(n){
+  if(n.nodeType===3){
+    const rec=KMUI.rec.get(n),cur=n.data;
+    if(KMUI.on){if(rec&&cur===rec.km)return;const t=kmT(cur);if(t!==cur){KMUI.rec.set(n,{en:cur,km:t});n.data=t}}
+    else if(rec&&cur===rec.km){n.data=rec.en;KMUI.rec.delete(n)}
+  }else if(n.nodeType===1){
+    if(/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.tagName))return;
+    if(n.placeholder!==undefined&&n.getAttribute&&n.hasAttribute('placeholder')){
+      if(!n.dataset.phEn)n.dataset.phEn=n.getAttribute('placeholder');
+      const e=n.dataset.phEn,t=KMUI.on?kmT(e):e;if(n.getAttribute('placeholder')!==t)n.setAttribute('placeholder',t)}
+    for(const c of n.childNodes)kmNode(c);
+  }
+}
+function kmSet(on){
+  KMUI.on=on;try{localStorage.setItem('khmerLang',on?'km':'en')}catch(e){}
+  document.documentElement.lang=on?'km':'en';document.body.classList.toggle('km',on);kmNode(document.body);
+  for(const id of ['langbtn','langBtn2']){const b=document.getElementById(id);if(b)b.textContent=on?'EN':'ខ្មែរ'}
+  if(on&&typeof kmFix==='function')kmFix();
+}
+(function(){
+  let busy=false;
+  const mo=new MutationObserver(ms=>{if(!KMUI.on||busy)return;busy=true;try{for(const m of ms){if(m.type==='characterData')kmNode(m.target);else for(const a of m.addedNodes)kmNode(a)}}finally{busy=false}});
+  const start=()=>{try{mo.observe(document.body,{childList:true,subtree:true,characterData:true})}catch(e){}
+    const f=e=>{e.stopPropagation();kmSet(!KMUI.on)};
+    $('langbtn').onclick=f;$('langBtn2').onclick=f;
+    let on=false;try{on=localStorage.getItem('khmerLang')==='km'}catch(e){}kmSet(on)};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
 var SND={on:true};try{SND.on=localStorage.getItem('khmerSnd')!=='0'}catch(e){}
 var MUS={on:true,ctx:null,timer:0,t:0,step:0,playing:false};
 try{MUS.on=localStorage.getItem('khmerMus')!=='0'}catch(e){}
