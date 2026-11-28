@@ -1452,11 +1452,13 @@ function playVerse(v){
   if(VS.items.length<2){VS.on=false;$('vmsg').textContent='That verse is too short to play.';return}
   goFull();$('vread').classList.add('hidden');$('verses').classList.add('hidden');$('levels').classList.add('hidden');$('menu').classList.add('hidden');$('game').classList.remove('hidden');play(true);att=0;begin();
 }
+function vCred(){try{return JSON.parse(localStorage.getItem('khmerVCred')||'{}')}catch(e){return{}}}
+function vFirst(key,already){const c=vCred();if(c[key]||already)return false;c[key]=1;try{localStorage.setItem('khmerVCred',JSON.stringify(c))}catch(e){}return true}
 function vWin(){
   mode='dead';fail='';$('q').textContent='🎉 '+VS.ref;$('opts').innerHTML='';
-  {const vv=VS.id&&VL.find(x=>x.id===VS.id);if(vv){vv.prog=100;vv.done=(vv.done|0)+1;vSaveAll()}}
-  const before=S.vmem|0;S.vmem=before+VS.nwords;const got=AURAS.filter(a=>a.thr>before&&a.thr<=S.vmem);saveStore();
-  msgBtn('Verse complete! '+VS.nwords+' words memorized, '+att+' attempt'+(att>1?'s':'')+'. '+(got.length?'✨ New aura: '+got[got.length-1].name+'!':'')+' ('+(S.vmem|0).toLocaleString()+' total)','Play again',()=>{att=0;begin()});
+  let first=true;{const vv=VS.id&&VL.find(x=>x.id===VS.id);if(vv){first=vFirst(VS.ref+'|'+VS.nwords,vv.done|0);vv.prog=100;vv.done=(vv.done|0)+1;vSaveAll()}else first=vFirst(VS.ref+'|'+VS.nwords,0)}
+  const before=S.vmem|0;S.vmem=before+(first?VS.nwords:0);const got=AURAS.filter(a=>a.thr>before&&a.thr<=S.vmem);saveStore();
+  msgBtn('Verse complete! '+(first?VS.nwords+' new words memorized, ':'Already memorized, no new words counted, ')+att+' attempt'+(att>1?'s':'')+'. '+(got.length?'✨ New aura: '+got[got.length-1].name+'!':'')+' ('+(S.vmem|0).toLocaleString()+' total)','Play again',()=>{att=0;begin()});
   draw();
 }
 function vSetQ(i){
@@ -2019,7 +2021,7 @@ function raceTick(force){
   try{FB.roomUpdate(RACE.code,'players/'+FB.uid(),{d:Math.round(d),y:Math.round(y),q:qi,x:mode==='dead'?1:0,a:att}).catch(()=>{})}catch(e){}
 }
 function raceWin(){
-  mode='spec';RACE.spec=true;RACE.conf=[];fail='';if(VS.on){S.vmem=(S.vmem|0)+VS.nwords;saveStore()}else{reviewWords(run);learnWords(run)}
+  mode='spec';RACE.spec=true;RACE.conf=[];fail='';if(VS.on){if(vFirst(VS.ref+'|'+VS.nwords,0)){S.vmem=(S.vmem|0)+VS.nwords;saveStore()}}else{reviewWords(run);learnWords(run)}
   $('q').textContent='🏁 Finished!';$('opts').innerHTML='';
   RACE.fin=true;RACE.sig='';
   const me=FB.uid(),ms=Date.now()-RACE.t0;
