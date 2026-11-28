@@ -192,7 +192,13 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
   <div class="row"><button class="pri" id="vsave">Save verse</button><span class="hint" id="vmsg"></span></div>
   <h3>🎲 Suggested verses</h3>
   <div class="lvlist" id="vrecs" style="flex:none;overflow:visible"></div>
-  <div class="row"><button id="vreroll">🎲 New suggestions</button><button id="vclose" style="margin-left:auto">Close</button></div>
+  <div class="row"><button id="vreroll">🎲 New suggestions</button><button id="vrand">🎲 Random from the whole Bible</button></div>
+  <h3>📚 Browse the whole Bible</h3>
+  <p class="hint" id="vbhint">Pick a book and chapter, then tap the verses you want. Text: Khmer Unlocked Literal Bible (Door43, Wycliffe Associates), free to share.</p>
+  <div class="row"><select id="vbbook" style="flex:1;min-width:0"></select><select id="vbch" style="width:90px"></select></div>
+  <div class="lvlist" id="vblist" style="flex:none;overflow:visible;margin-top:6px"></div>
+  <div class="row"><button class="pri" id="vbadd" disabled>＋ Add selected verses</button><button id="vbread" disabled>Read</button><span class="hint" id="vbmsg"></span></div>
+  <div class="row"><button id="vclose" style="margin-left:auto">Close</button></div>
 </div>
 <div id="vread" class="sheet hidden" style="overflow:auto">
   <h2 id="vrref"></h2>
@@ -1587,6 +1593,65 @@ var VPOOLKM=[
 ];
 var VRECS=[];
 function vReroll(){const have=new Set(VL.map(v=>v.ref.toLowerCase()));VRECS=shuffle(VPOOLKM.filter(p=>!have.has(p[0].toLowerCase()))).slice(0,3)}
+
+/* ---- Whole-Bible verse library (Khmer Unlocked Literal Bible, searched with peak.wasm; loads on first use) ---- */
+var BIBLE=[['gen','Genesis'],['exo','Exodus'],['lev','Leviticus'],['num','Numbers'],['deu','Deuteronomy'],['jos','Joshua'],['jdg','Judges'],['rut','Ruth'],['1sa','1 Samuel'],['2sa','2 Samuel'],['1ki','1 Kings'],['2ki','2 Kings'],['1ch','1 Chronicles'],['2ch','2 Chronicles'],['ezr','Ezra'],['neh','Nehemiah'],['est','Esther'],['job','Job'],['psa','Psalms'],['pro','Proverbs'],['ecc','Ecclesiastes'],['sol','Song of Solomon'],['isa','Isaiah'],['jer','Jeremiah'],['lam','Lamentations'],['eze','Ezekiel'],['dan','Daniel'],['hos','Hosea'],['joe','Joel'],['amo','Amos'],['oba','Obadiah'],['jon','Jonah'],['mic','Micah'],['nah','Nahum'],['hab','Habakkuk'],['zep','Zephaniah'],['hag','Haggai'],['zec','Zechariah'],['mal','Malachi'],['mat','Matthew'],['mar','Mark'],['luk','Luke'],['joh','John'],['act','Acts'],['rom','Romans'],['1co','1 Corinthians'],['2co','2 Corinthians'],['gal','Galatians'],['eph','Ephesians'],['phi','Philippians'],['col','Colossians'],['1th','1 Thessalonians'],['2th','2 Thessalonians'],['1ti','1 Timothy'],['2ti','2 Timothy'],['tit','Titus'],['phm','Philemon'],['heb','Hebrews'],['jam','James'],['1pe','1 Peter'],['2pe','2 Peter'],['1jo','1 John'],['2jo','2 John'],['3jo','3 John'],['jud','Jude'],['rev','Revelation']];
+var FAMOUS='gen 1.1;gen 1.27;gen 12.2-3;exo 14.14;exo 20.3-8;deu 6.4-6;deu 31.6;jos 1.9;1sa 16.7;psa 1.1-3;psa 19.1;psa 23.1-4;psa 23.5-6;psa 27.1;psa 34.8;psa 37.4;psa 46.1;psa 51.10;psa 91.1-2;psa 100.1-3;psa 119.11;psa 119.105;psa 121.1-2;psa 139.13-14;pro 3.5-6;pro 4.23;pro 16.3;pro 18.10;isa 6.8;isa 9.6;isa 26.3;isa 40.31;isa 41.10;isa 43.1-2;isa 53.5;isa 55.8-9;jer 29.11;jer 33.3;lam 3.22-23;mic 6.8;hab 2.4;zep 3.17;mat 4.4;mat 5.3-6;mat 5.14-16;mat 6.9-13;mat 6.33;mat 7.7-8;mat 11.28-30;mat 16.24;mat 22.37-39;mat 28.18-20;mar 10.45;mar 12.30-31;luk 2.10-11;luk 6.31;luk 9.23;joh 1.1-3;joh 1.14;joh 3.16;joh 3.17;joh 8.12;joh 10.10;joh 10.11;joh 11.25;joh 13.34-35;joh 14.1-3;joh 14.6;joh 14.27;joh 15.5;joh 15.13;joh 16.33;act 1.8;act 2.38;act 4.12;rom 1.16;rom 3.23;rom 5.8;rom 6.23;rom 8.1;rom 8.28;rom 8.38-39;rom 10.9-10;rom 10.17;rom 12.1-2;rom 12.12;1co 10.13;1co 13.4-7;1co 15.57;2co 5.17;2co 5.21;2co 12.9;gal 2.20;gal 5.22-23;eph 2.8-9;eph 4.32;eph 6.10-11;phi 1.6;phi 4.4-7;phi 4.8;phi 4.13;col 3.23;1th 5.16-18;2ti 1.7;2ti 3.16-17;heb 4.12;heb 11.1;heb 11.6;heb 12.1-2;heb 13.5;jam 1.2-4;jam 1.5;jam 1.22;jam 4.7-8;1pe 5.7;1jo 1.9;1jo 4.8;1jo 4.19;rev 3.20;rev 21.4'.split(';');
+function bibOpen(){return typeof dictOpenF==='function'?dictOpenF('U','km-ulb.peak.zst',13353):Promise.reject(Error('no-bible'))}
+function bibClean(t){return String(t).replace(/¶/g,'').replace(/[​]/g,'').replace(/\s+/g,' ').trim()}
+async function bibVerse(code,ch,v){const f=await bibOpen(),r=f(code+' '+ch+'.'+v);if(!r.length)return null;const q=r[0].split('\t');return{ref:q[1]||'',text:bibClean(q[2]||'')}}
+async function bibPassage(code,ch,v1,v2){
+  let ref='',txt=[];
+  for(let v=v1;v<=v2;v++){const x=await bibVerse(code,ch,v);if(!x)break;if(!ref)ref=x.ref;txt.push(x.text)}
+  if(!txt.length)return null;if(v2>v1&&ref)ref=ref.replace(/(\d+)$/,'$1-'+(v1+txt.length-1));
+  return[ref,txt.join(' ')]}
+async function bibFamous(n){
+  const have=new Set(VL.map(v=>v.ref)),pool=shuffle(FAMOUS.slice()),out=[];
+  for(const k of pool){if(out.length>=n)break;const m=k.match(/^(\w+) (\d+)\.(\d+)(?:-(\d+))?$/);const r=await bibPassage(m[1],+m[2],+m[3],+(m[4]||m[3])).catch(()=>null);if(r&&!have.has(r[0]))out.push(r)}
+  return out}
+async function bibRandom(n){
+  const have=new Set(VL.map(v=>v.ref)),out=[];
+  for(let i=0;i<60&&out.length<n;i++){const b=BIBLE[Math.floor(Math.random()*BIBLE.length)],ch=1+Math.floor(Math.random()*(b[0]==='psa'?150:30)),v=1+Math.floor(Math.random()*25);
+    const x=await bibVerse(b[0],ch,v).catch(()=>null);if(!x)continue;const w=vWords(x.text).length;if(w<6||w>34||have.has(x.ref)||out.some(o=>o[0]===x.ref))continue;out.push([x.ref,x.text])}
+  return out}
+async function vFill(kind){
+  $('vrecs').textContent='…';
+  try{const r=kind==='rand'?await bibRandom(3):await bibFamous(3);if(r.length){VRECS=r;vRecRender();return}}catch(e){}
+  vReroll();vRecRender()}
+/* browse */
+var BR={code:'gen',ch:1,sel:new Set(),max:0};
+function bibBrowseInit(){
+  const bs=$('vbbook');if(bs.options.length)return;
+  const kh={};for(const k in BA.books)kh[BA.books[k]]=k;
+  for(const b of BIBLE){const o=document.createElement('option');o.value=b[0];o.textContent=b[1]+(kh[b[0]]?' · '+kh[b[0]]:'');bs.appendChild(o)}
+  bs.onchange=()=>bibChapters(bs.value);$('vbch').onchange=()=>bibVerses($('vbbook').value,+$('vbch').value);
+  bibChapters('gen');
+}
+async function bibChapters(code){
+  const sel=$('vbch');sel.textContent='';$('vblist').textContent='…';
+  try{let n=0;for(let c=1;c<=150;c++){if(!await bibVerse(code,c,1))break;n=c;const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o)}
+    if(n)bibVerses(code,1)}catch(e){$('vblist').textContent='';$('vbmsg').textContent='The Bible text could not be loaded here.'}}
+async function bibVerses(code,ch){
+  BR.code=code;BR.ch=ch;BR.sel=new Set();bibSelUi();const box=$('vblist');box.textContent='…';const rows=[];
+  for(let v=1;v<=180;v++){const x=await bibVerse(code,ch,v);if(!x)break;rows.push([v,x])}
+  box.textContent='';BR.max=rows.length;
+  for(const [v,x] of rows){
+    const c=document.createElement('div');c.className='sc';c.style.cursor='pointer';const t=document.createElement('div');t.className='lvt';
+    const b=document.createElement('b');b.textContent=x.ref;const sp=document.createElement('span');sp.className='hint';sp.style.fontFamily='"Noto Sans Khmer",system-ui,sans-serif';sp.textContent=x.text.length>80?x.text.slice(0,78)+'…':x.text;
+    t.append(b,document.createElement('br'),sp);c.appendChild(t);c.dataset.v=v;
+    c.onclick=()=>{BR.sel.has(v)?BR.sel.delete(v):BR.sel.add(v);c.style.outline=BR.sel.has(v)?'3px solid #ffb02e':'';bibSelUi()};box.appendChild(c)}
+}
+function bibSelUi(){const n=BR.sel.size;$('vbadd').disabled=!n;$('vbread').disabled=!n;$('vbadd').textContent=n?'＋ Add '+n+' verse'+(n>1?'s':''):'＋ Add selected verses'}
+async function bibTake(){
+  const vs=[...BR.sel].sort((a,b)=>a-b),out=[];let i=0;
+  while(i<vs.length){let j=i;while(j+1<vs.length&&vs[j+1]===vs[j]+1)j++;const r=await bibPassage(BR.code,BR.ch,vs[i],vs[j]);if(r)out.push(vAdd(r[0],r[1]));i=j+1}
+  return out}
+function vBibWire(){
+  $('vbadd').onclick=async()=>{const o=await bibTake();BR.sel=new Set();document.querySelectorAll('#vblist .sc').forEach(c=>c.style.outline='');bibSelUi();$('vbmsg').textContent='Saved ✓ ('+o.length+')';vRender()};
+  $('vbread').onclick=async()=>{const o=await bibTake();vRender();if(o[0])openVerse(o[0])};
+  $('vrand').onclick=()=>vFill('rand');
+  $('vreroll').onclick=()=>vFill('famous');
+}
 function vRender(){
   const box=$('vlist');box.textContent='';$('vempty').classList.toggle('hidden',VL.length>0);
   for(const v of VL){
@@ -1667,9 +1732,8 @@ function vSetQ(i){
   const o=$('opts');o.innerHTML='';
   opts.forEach((k,n)=>{const b=document.createElement('button');b.textContent=k.replace(/\u200b/g,'');{const g=vGloss(k);if(g){const sm=document.createElement('small');sm.className='gl';sm.textContent=g;b.appendChild(sm)}}b.onclick=()=>pick(n);o.appendChild(b)});
 }
-$('lvverse').onclick=()=>{VRECS=[];vReroll();$('vmsg').textContent='';vRender();vRecRender();$('verses').classList.remove('hidden')};
+$('lvverse').onclick=()=>{VRECS=[];vReroll();$('vmsg').textContent='';vRender();vRecRender();$('verses').classList.remove('hidden');$('vbmsg').textContent='';vFill('famous');bibBrowseInit()};vBibWire();
 $('vclose').onclick=()=>$('verses').classList.add('hidden');
-$('vreroll').onclick=()=>{vReroll();vRecRender()};
 $('vsave').onclick=()=>{
   const ref=($('vref').value||'').trim()||'My verse',text=($('vtext').value||'').trim();
   if(!vIsKm(text)){$('vmsg').textContent='Please paste the verse in Khmer.';return}
