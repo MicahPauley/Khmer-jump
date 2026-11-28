@@ -126,8 +126,8 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
     <p class="hint" id="diffnote" style="margin:0;min-height:0"></p>
     <p id="curlv"></p>
     <div class="row2"><button id="edit" class="hidden">✎ My words</button><button id="lvbtn">★ Levels</button><button id="lvverse">📖 Verses</button></div>
-    <button id="storebtn">🏅 Accolades</button>
     <button id="mpbtn" class="hidden">👥 Multiplayer</button>
+    <button id="storebtn">🏅 Accolades</button>
     <p id="sync">…</p>
     <p id="audst"></p>
   </div>
@@ -2338,9 +2338,7 @@ const auth=getAuth(app),db=getDatabase(app);
 window.FB={
   onUser:cb=>onAuthStateChanged(auth,cb),
   async signIn(){const pr=new GoogleAuthProvider();pr.setCustomParameters({prompt:'select_account'});
-    const standalone=(navigator.standalone===true)||matchMedia('(display-mode: standalone)').matches;
-    if(standalone){await signInWithRedirect(auth,pr);return}
-    try{await signInWithPopup(auth,pr)}catch(e){const c=e&&e.code;if(c==='auth/popup-blocked'||c==='auth/operation-not-supported-in-this-environment'||c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request')await signInWithRedirect(auth,pr);else throw e}},
+    try{await signInWithPopup(auth,pr)}catch(e){const c=e&&e.code;if(c==='auth/popup-blocked'||c==='auth/operation-not-supported-in-this-environment')await signInWithRedirect(auth,pr);else throw e}},
   redirectResult:()=>getRedirectResult(auth),
   signOut:()=>signOut(auth),
   uid:()=>auth.currentUser?auth.currentUser.uid:null,
