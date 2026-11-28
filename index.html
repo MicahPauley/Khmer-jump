@@ -116,8 +116,10 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
       <button data-d="easy">Easy</button>
       <button data-d="medium" class="sel">Medium</button>
       <button data-d="hard">Hard</button>
+      <button data-d="extreme">🔥 Extreme</button>
     </div>
     <button class="pri" id="start">▶ PLAY</button>
+    <p class="hint" id="diffnote" style="margin:0;min-height:0"></p>
     <p id="curlv"></p>
     <div class="row2"><button id="edit" class="hidden">✎ My words</button><button id="lvbtn">★ Levels</button><button id="storebtn">🏅 Accolades</button></div>
     <button id="lvverse">📖 Verses</button>
@@ -260,20 +262,20 @@ async function fillEnglish(){
   st.textContent=bad+' line'+(bad>1?'s are':' is')+' missing the English or the Khmer. Put both on each line, like: water = ទឹក';return false;
 }
 $('words').addEventListener('input',updCount);updCount();
-document.querySelectorAll('#diff button').forEach(b=>b.onclick=()=>{diff=b.dataset.d;document.querySelectorAll('#diff button').forEach(x=>x.classList.toggle('sel',x===b))});
+document.querySelectorAll('#diff button').forEach(b=>b.onclick=()=>{diff=b.dataset.d;try{$('diffnote').textContent=diff==='extreme'?'🔥 Extreme: obstacles come back to back. Tap the right word the instant you land!':''}catch(e){}document.querySelectorAll('#diff button').forEach(x=>x.classList.toggle('sel',x===b))});
 
 /* ===== game ===== */
 const cv=$('cv'),ctx=cv.getContext('2d');
 const W=960,B=36,BX=150,L=330,PK=110;let H=270,GY=190;
 function fitCanvas(){const vw=Math.max(1,innerWidth),vh=Math.max(1,innerHeight);if(vh>vw)return;H=Math.max(270,Math.min(620,Math.round(W*vh/vw)));GY=Math.round(H*.56);if(cv.height!==H)cv.height=H;if(cv.width!==W)cv.width=W}
 addEventListener('resize',fitCanvas);addEventListener('orientationchange',()=>setTimeout(fitCanvas,200));fitCanvas();
-const SPEED={easy:260,medium:360,hard:500};
+const SPEED={easy:260,medium:360,hard:500,extreme:620};
 let run=[],obs=[],d=0,v=0,y=0,qi=0,mode='menu',last=0,opts=[],att=0,fail=null,flash=0,shake=0,parts=[],tPlay=0,loopGen=0,pAcc=0;
 var PENDING_ROOM=(function(){try{const r=(new URLSearchParams(location.search).get('room')||'').trim().toUpperCase();return /^[A-Z]{4}$/.test(r)?r:''}catch(e){return''}})();
 var RACE={on:false,players:{},fin:false,win:null,round:0};
 let air=false,fell=false,s=0,s0=0,y0=0,rot=0,coy=0,jumpReq=0;
 
-const GAPT=[2.3,2.0,2.6,2.2,2.5,2.0,2.4,2.1];
+const GAPT=[2.3,2.0,2.6,2.2,2.5,2.0,2.4,2.1],GAPX=[.55,.5,.6,.5,.55,.5,.6,.5];
 function hashStr(s){let h=2166136261>>>0;s=String(s);for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 function rng32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 var LAY={seed:1};
@@ -329,7 +331,7 @@ function plan(n){
     const p2=pool.filter(q=>q!==last);if(p2.length)pool=p2;
     const kd=pool[Math.floor(rg()*pool.length)];
     const ob=mk(kd,x,b,px,rg);o.push(ob);
-    last=kd;left--;b=ob.bout;px=ob.x1;x=ob.x1+GAPT[i%GAPT.length]*v;
+    last=kd;left--;b=ob.bout;px=ob.x1;x=ob.x1+(v>=600?GAPX:GAPT)[i%8]*v;
   }
   if(o.length){const l=o[o.length-1];l.sg.push({a:l.x1-30,b:l.x1+B+600,h:l.bout})}
   return o;
@@ -1019,6 +1021,7 @@ $('resumeBtn').onclick=()=>{$('pausePanel').classList.add('hidden');if(RACE.on)r
 function die(t){
   if(mode!=='play')return;
   fail=t;mode='dead';shake=14;if(RACE.on)raceTick(true);
+  if(VS.on&&VS.id){const vv=VL.find(x=>x.id===VS.id);if(vv&&run.length){const pc=Math.floor(100*qi/run.length);if(pc>(vv.prog||0)){vv.prog=pc;vSaveAll()}}}
   {const lvl=LV.find(x=>x.id===curLv);if(lvl&&run.length){const pc=Math.floor(100*qi/run.length);if(pc>(lvl.prog||0)){lvl.prog=pc;lvWrite()}}}
   msgBtn(t,'Restart',begin);
   (function f(){draw();if(shake>.5)requestAnimationFrame(f)})();
@@ -1377,9 +1380,10 @@ function vRender(){
   const box=$('vlist');box.textContent='';$('vempty').classList.toggle('hidden',VL.length>0);
   for(const v of VL){
     const c=document.createElement('div');c.className='sc';const t=document.createElement('div');t.className='lvt';
-    const b=document.createElement('b');b.textContent=v.ref;const sp=document.createElement('span');sp.className='hint';sp.textContent=vWords(v.text).length+' words · '+vChunks(v.text).length+' steps';sp.style.fontFamily='"Noto Sans Khmer",system-ui,sans-serif';
+    const b=document.createElement('b');b.textContent=v.ref;const sp=document.createElement('span');sp.className='hint';sp.textContent=vWords(v.text).length+' words · '+(v.prog|0)+'% through'+(v.done?' · ✓ memorized ×'+v.done:'');sp.style.fontFamily='"Noto Sans Khmer",system-ui,sans-serif';
     t.append(b,document.createElement('br'),sp);
     const pl=lvBtn('▶','pri');pl.onclick=()=>playVerse(v);const del=lvBtn('🗑');del.onclick=()=>{if(del.dataset.s){VL=VL.filter(x=>x.id!==v.id);vSaveAll();vRender();vRecRender()}else{del.dataset.s=1;del.textContent='Sure?';setTimeout(()=>{del.dataset.s='';del.textContent='🗑'},2500)}};
+    const pb=document.createElement('div');pb.className='pbar';pb.style.cssText='margin-top:5px;height:7px';const pf=document.createElement('i');pf.style.width=(v.prog|0)+'%';pb.appendChild(pf);t.appendChild(pb);
     c.append(t,pl,del);box.appendChild(c);
   }
 }
@@ -1397,12 +1401,13 @@ function vRecRender(){
 }
 function vAdd(ref,text){let v=VL.find(x=>x.ref.toLowerCase()===ref.toLowerCase()&&x.text===text);if(!v){v={id:'v'+Date.now()+Math.floor(Math.random()*99),ref,text};VL.push(v);vSaveAll()}return v}
 function playVerse(v){
-  VS.on=true;VS.ref=v.ref;VS.items=vChunks(v.text).map(c=>({en:v.ref,km:c}));VS.nwords=vWords(v.text).length;VS.trail=[];curLv=null;
+  VS.on=true;VS.id=v.id;VS.ref=v.ref;VS.items=vChunks(v.text).map(c=>({en:v.ref,km:c}));VS.nwords=vWords(v.text).length;VS.trail=[];curLv=null;
   if(VS.items.length<2){VS.on=false;$('vmsg').textContent='That verse is too short to play.';return}
   goFull();$('verses').classList.add('hidden');$('levels').classList.add('hidden');$('menu').classList.add('hidden');$('game').classList.remove('hidden');play(true);att=0;begin();
 }
 function vWin(){
   mode='dead';fail='';$('q').textContent='🎉 '+VS.ref;$('opts').innerHTML='';
+  {const vv=VS.id&&VL.find(x=>x.id===VS.id);if(vv){vv.prog=100;vv.done=(vv.done|0)+1;vSaveAll()}}
   const before=S.vmem|0;S.vmem=before+VS.nwords;const got=AURAS.filter(a=>a.thr>before&&a.thr<=S.vmem);saveStore();
   msgBtn('Verse complete! '+VS.nwords+' words memorized, '+att+' attempt'+(att>1?'s':'')+'. '+(got.length?'✨ New aura: '+got[got.length-1].name+'!':'')+' ('+(S.vmem|0).toLocaleString()+' total)','Play again',()=>{att=0;begin()});
   draw();
@@ -2091,8 +2096,8 @@ function raceHud(){
 }
 $('mpbtn').onclick=mpOpen;
 $('mpBack').onclick=()=>{if(MP.code)mpLeave();$('mp').classList.add('hidden');$('menu').classList.remove('hidden')};
-$('mpHost').onclick=()=>{if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}mpMsg('');MP.diff=diff;MP.vm=false;$('mpPickHint').textContent='Choose the speed and the level for this race:';mpPickRender();mpView('mpPick')};
-$('mpHostV').onclick=()=>{if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}mpMsg('');MP.diff=diff;MP.vm=true;$('mpPickHint').textContent='Choose the speed and the verse for this race (save verses under 📖 Verses):';mpVerseRender();mpView('mpPick')};
+$('mpHost').onclick=()=>{if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}mpMsg('');MP.diff=diff==='extreme'?'hard':diff;MP.vm=false;$('mpPickHint').textContent='Choose the speed and the level for this race:';mpPickRender();mpView('mpPick')};
+$('mpHostV').onclick=()=>{if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}mpMsg('');MP.diff=diff==='extreme'?'hard':diff;MP.vm=true;$('mpPickHint').textContent='Choose the speed and the verse for this race (save verses under 📖 Verses):';mpVerseRender();mpView('mpPick')};
 function mpVerseRender(){
   const box=$('mpLv');box.textContent='';let n=0;
   for(const v of VL){
