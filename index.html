@@ -94,7 +94,7 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 .opts{flex:0 1 68%;display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .opts button{font-family:"Noto Sans Khmer","Khmer OS","Leelawadee UI",sans-serif;font-size:clamp(17px,3.4vw,24px);min-height:54px;padding:6px 4px}
 .opts button small.ip{display:block;font:12px/1.2 system-ui,sans-serif;opacity:.8;margin-top:2px}
-body.noipa .ip{display:none}
+body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
 @media (orientation:portrait){.panel{flex-direction:column;align-items:stretch;padding-left:0}.word{text-align:center;flex:none}.opts{flex:none}}
 #rot{display:none;position:fixed;inset:0;z-index:50;background:#0b1226;color:#fff;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-size:20px;font-weight:700;text-align:center}
 #rot span{font-size:64px;display:inline-block;animation:r 2s ease-in-out infinite}
