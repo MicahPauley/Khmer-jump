@@ -214,7 +214,7 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
 
 <div id="game" class="screen hidden">
   <div class="stage"><canvas id="cv" width="960" height="270"></canvas><button id="pauseBtn" aria-label="Pause">❚❚</button><div class="msg" id="msg"></div>
-    <div id="pausePanel" class="hidden"><b>Paused</b><button class="pri" id="resumeBtn">▶ Resume</button><button id="ipaBtn">IPA ✓</button><button id="menuBtn">✕ Quit to menu</button><p class="hint" id="audst2" style="margin:4px 0 0;color:#fff"></p></div></div>
+    <div id="pausePanel" class="hidden"><b>Paused</b><button class="pri" id="resumeBtn">▶ Resume</button><button id="ipaBtn">IPA ✓</button><button id="musBtn2">🎵 Music ✓</button><button id="menuBtn">✕ Quit to menu</button><p class="hint" id="audst2" style="margin:4px 0 0;color:#fff"></p></div></div>
   <div class="panel"><div class="word" id="q"></div><div class="opts" id="opts"></div></div>
 </div>
 <div id="rot"><span>📱</span>Turn your phone sideways to play</div>
@@ -370,16 +370,17 @@ try{MUS.on=localStorage.getItem('khmerMus')!=='0'}catch(e){}
   MUS.start=function(){
     if(MUS.playing||!MUS.on)return;
     try{
-      const AC=window.AudioContext||window.webkitAudioContext;if(!MUS.ctx){MUS.ctx=new AC();MUS.g=MUS.ctx.createGain();MUS.g.gain.value=.12;MUS.g.connect(MUS.ctx.destination)}
+      const AC=window.AudioContext||window.webkitAudioContext;if(!MUS.ctx){MUS.ctx=new AC();MUS.g=MUS.ctx.createGain();MUS.g.gain.value=MUS.v||.12;MUS.g.connect(MUS.ctx.destination)}
       MUS.ctx.resume();MUS.playing=true;MUS.t=MUS.ctx.currentTime+.1;MUS.step=0;sched();
     }catch(e){MUS.playing=false}
   };
-  MUS.stop=function(){MUS.playing=false;clearTimeout(MUS.timer);try{if(MUS.ctx&&MUS.ctx.state==='running'){const g=MUS.g.gain;g.setValueAtTime(g.value,MUS.ctx.currentTime);g.linearRampToValueAtTime(0,MUS.ctx.currentTime+.15);setTimeout(()=>{try{MUS.g.gain.value=.12;MUS.ctx.suspend()}catch(e){}},200)}}catch(e){}};
-  MUS.sync=function(){const m=$('menu');const show=m&&!m.classList.contains('hidden');if(show&&MUS.on&&MUS.armed)MUS.start();else MUS.stop();const b=$('musbtn');if(b)b.textContent=MUS.on?'🎵':'🔇'};
+  MUS.stop=function(){MUS.playing=false;clearTimeout(MUS.timer);try{if(MUS.ctx&&MUS.ctx.state==='running'){const g=MUS.g.gain;g.setValueAtTime(g.value,MUS.ctx.currentTime);g.linearRampToValueAtTime(0,MUS.ctx.currentTime+.15);setTimeout(()=>{try{if(!MUS.playing){MUS.g.gain.value=MUS.v||.12;MUS.ctx.suspend()}}catch(e){}},200)}}catch(e){}};
+  MUS.sync=function(){const m=$('menu');const show=m&&!m.classList.contains('hidden');MUS.v=show?.12:.04;if(MUS.on&&MUS.armed&&!document.hidden){MUS.start();try{if(MUS.g)MUS.g.gain.setTargetAtTime(MUS.v,MUS.ctx.currentTime,.25)}catch(e){}}else MUS.stop();const b=$('musbtn');if(b)b.textContent=MUS.on?'🎵':'🔇';const b2=$('musBtn2');if(b2)b2.textContent=MUS.on?'🎵 Music ✓':'🔇 Music'};
   addEventListener('pointerdown',function(){if(!MUS.armed){MUS.armed=true;MUS.sync()}},{passive:true});
   addEventListener('keydown',function(){if(!MUS.armed){MUS.armed=true;MUS.sync()}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)MUS.stop();else MUS.sync()});
   try{new MutationObserver(MUS.sync).observe($('menu'),{attributes:true,attributeFilter:['class']})}catch(e){}
+  $('musBtn2').onclick=e=>{e.stopPropagation();MUS.on=!MUS.on;try{localStorage.setItem('khmerMus',MUS.on?'1':'0')}catch(x){}MUS.armed=true;MUS.sync()};
   $('musbtn').onclick=e=>{e.stopPropagation();MUS.on=!MUS.on;try{localStorage.setItem('khmerMus',MUS.on?'1':'0')}catch(x){}MUS.armed=true;MUS.sync()};
   MUS.sync();
 })();
