@@ -223,7 +223,7 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
   </div>
   <div id="mpPick" class="hidden" style="flex:1;min-height:0;display:flex;flex-direction:column;gap:8px">
     <p class="hint" id="mpPickHint">Choose the speed and the level for this race:</p>
-    <div class="row" id="mpDiff"><button class="mpd" data-d="easy">Easy</button><button class="mpd" data-d="medium">Medium</button><button class="mpd" data-d="hard">Hard</button></div>
+    <div class="row" id="mpDiff"><button class="mpd" data-d="easy">Easy</button><button class="mpd" data-d="medium">Medium</button><button class="mpd" data-d="hard">Hard</button><button class="mpd" data-d="extreme">🔥 Extreme</button></div>
     <div class="lvlist" id="mpLv"></div>
     <p class="hint hidden" id="mpNoLv">You have no saved levels yet. Save one under ★ Levels first.</p>
     <div class="row"><button id="mpPickBack">Back</button></div>
@@ -1463,11 +1463,11 @@ function draw(){
     else{const tcol=hexRgb(colorOf(S.eqC).c);ctx.fillStyle='rgba('+tcol[0]+','+tcol[1]+','+tcol[2]+','+(a*.45)+')';const z=B*.55*a;ctx.fillRect(sx(p.x)-z/2,sy(p.y)-B/2-z/2,z,z)}
   }
   if(RACE.on)raceGhosts(sx,tm);
-  if(!RACE.spec){ctx.save();ctx.translate(BX,GY-(y-cam)-B/2);ctx.rotate(rot);
+  if(!(RACE.on&&RACE.spec)){ctx.save();ctx.translate(BX,GY-(y-cam)-B/2);ctx.rotate(rot);
   drawBlock(ctx,B,S.eqS,colorOf(S.eqC),tm,mode==='dead'&&!!fail,gearNow());
   ctx.restore();}
   for(const o of vis)if(o.rg)for(const r of o.rg)drawRing(r,sx,sy,tm,true);
-  if(S.eqP&&!RACE.spec){drawPet(ctx,S.eqP,sx(petD),sy(petY)-B/2+4+Math.sin(tm*5)*2,tm,26)}
+  if(S.eqP&&!(RACE.on&&RACE.spec)){drawPet(ctx,S.eqP,sx(petD),sy(petY)-B/2+4+Math.sin(tm*5)*2,tm,26)}
   if(run.length&&obs.length){
     const done=Math.max(0,Math.min(1,d/(obs[obs.length-1].x1+B+240)));
     ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(0,0,W,5);ctx.fillStyle='#f28c1b';ctx.fillRect(0,0,W*done,5);
@@ -2170,7 +2170,7 @@ function mpClosed(){
 }
 function mpCleanup(){
   MP.left=true;if(MP.unsub){try{MP.unsub()}catch(e){}MP.unsub=null}
-  if(RACE.on){RACE.on=false;if(RACE.prevLv!==undefined)curLv=RACE.prevLv}
+  if(RACE.on){RACE.on=false;if(RACE.prevLv!==undefined)curLv=RACE.prevLv}RACE.spec=false;
   RACE.players={};MP.code='';MP.room=null;
 }
 async function mpLeave(){
@@ -2283,7 +2283,7 @@ function raceStandings(){
   m.appendChild(brow);
 }
 function mpBackToLobby(){
-  RACE.on=false;if(RACE.prevLv!==undefined)curLv=RACE.prevLv;
+  RACE.on=false;RACE.spec=false;if(RACE.prevLv!==undefined)curLv=RACE.prevLv;
   mode='menu';loopGen++;$('msg').textContent='';$('pausePanel').classList.add('hidden');play(false);leaveFull();$('game').classList.add('hidden');
   try{FB.roomUpdate(MP.code,'players/'+FB.uid(),{fin:null,d:0,y:0,q:0,x:0,a:1}).catch(()=>{})}catch(e){}
   $('mp').classList.remove('hidden');mpView('mpLobby');mpLobbyRender();
@@ -2349,8 +2349,8 @@ function raceHud(){
 }
 $('mpbtn').onclick=mpOpen;
 $('mpBack').onclick=()=>{if(MP.code)mpLeave();$('mp').classList.add('hidden');$('menu').classList.remove('hidden')};
-$('mpHost').onclick=()=>{if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}mpMsg('');MP.diff=diff==='extreme'?'hard':diff;MP.vm=false;$('mpPickHint').textContent='Choose the speed and the level for this race:';mpPickRender();mpView('mpPick')};
-$('mpHostV').onclick=()=>{if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}mpMsg('');MP.diff=diff==='extreme'?'hard':diff;MP.vm=true;$('mpPickHint').textContent='Choose the speed and the verse for this race (save verses under 📖 Verses):';mpVerseRender();mpView('mpPick')};
+$('mpHost').onclick=()=>{if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}mpMsg('');MP.diff=diff;MP.vm=false;$('mpPickHint').textContent='Choose the speed and the level for this race:';mpPickRender();mpView('mpPick')};
+$('mpHostV').onclick=()=>{if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}mpMsg('');MP.diff=diff;MP.vm=true;$('mpPickHint').textContent='Choose the speed and the verse for this race (save verses under 📖 Verses):';mpVerseRender();mpView('mpPick')};
 function mpVerseRender(){
   const box=$('mpLv');box.textContent='';let n=0;
   for(const v of VL){
