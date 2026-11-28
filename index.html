@@ -196,7 +196,8 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
   </div>
   <p class="hint" id="vrinfo"></p>
   <p class="hint">Read it through first. Tap any word you don't know yet to highlight it and add its English. While you play, that English shows under the choices. Then press Play.</p>
-  <div class="row"><button class="pri" id="vrplay">▶ Play</button><button id="vrback" style="margin-left:auto">Back</button></div>
+  <div class="row"><button id="vrlisten">🔊 Listen</button><button class="pri" id="vrplay">▶ Play</button><button id="vrback" style="margin-left:auto">Back</button></div>
+  <p class="hint" id="vraud" style="font-size:11px"></p>
 </div>
 
 <div id="mp" class="sheet hidden">
@@ -287,7 +288,7 @@ const SPEED={easy:260,medium:360,hard:500,extreme:620};
 let run=[],obs=[],d=0,v=0,y=0,qi=0,mode='menu',last=0,opts=[],att=0,fail=null,flash=0,shake=0,parts=[],tPlay=0,loopGen=0,pAcc=0;
 var PENDING_ROOM=(function(){try{const r=(new URLSearchParams(location.search).get('room')||'').trim().toUpperCase();return /^[A-Z]{4}$/.test(r)?r:''}catch(e){return''}})();
 var RACE={on:false,players:{},fin:false,win:null,round:0};
-let air=false,fell=false,s=0,s0=0,y0=0,rot=0,coy=0,jumpReq=0;
+let pickedQ=-1,air=false,fell=false,s=0,s0=0,y0=0,rot=0,coy=0,jumpReq=0;
 
 const GAPT=[2.3,2.0,2.6,2.2,2.5,2.0,2.4,2.1],GAPX=[.55,.5,.6,.5,.55,.5,.6,.5];
 function hashStr(s){let h=2166136261>>>0;s=String(s);for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
@@ -458,6 +459,69 @@ function unlockAudio(){
 }
 function tnCtxGet(){const AC=window.AudioContext||window.webkitAudioContext;if(!tnCtx){try{tnCtx=new AC({sampleRate:16000})}catch(e){tnCtx=new AC()}}return tnCtx}
 addEventListener('pointerdown',function u(){unlockAudio();try{const c=tnCtxGet();c.resume();const b=c.createBuffer(1,1,16000),n=c.createBufferSource();n.buffer=b;n.connect(c.destination);n.start(0)}catch(e){}removeEventListener('pointerdown',u,true)},true);
+/* ---- Bible chapter audio (KHSV, PeakSlab). Loaded only when a verse is played. ---- */
+var BA={P:null,voices:{},ch:null,books:{"លោកុប្បត្តិ":"gen","និក្ខមនំ":"exo","លេវីវិន័យ":"lev","ជនគណនា":"num","ទុតិយកថា":"deu","យ៉ូស្វេ":"jos","ចៅហ្វាយ":"jdg","នាងរស់":"rut","១សាំយូអែល":"1sa","២សាំយូអែល":"2sa","១ពង្សាវតារក្សត្រ":"1ki","២ពង្សាវតារក្សត្រ":"2ki","១របាក្សត្រ":"1ch","២របាក្សត្រ":"2ch","អែសរ៉ា":"ezr","នេហេមា":"neh","នាងអេសធើរ":"est","យ៉ូប":"job","ទំនុកតម្កើង":"psa","សុភាសិត":"pro","សាស្ដា":"ecc","បទចំរៀង":"sol","អេសាយ":"isa","យេរេមា":"jer","បរិទេវ":"lam","អេសេគាល":"eze","ដានីយ៉ែល":"dan","ហូសេ":"hos","យ៉ូអែល":"joe","អេម៉ុស":"amo","អូបាឌា":"oba","យ៉ូណាស":"jon","មីកា":"mic","ណាហ៊ូម":"nah","ហាបាគូក":"hab","សេផានា":"zep","ហាកាយ":"hag","សាការី":"zec","ម៉ាឡាគី":"mal","ម៉ាថាយ":"mat","ម៉ាកុស":"mar","លូកា":"luk","យ៉ូហាន":"joh","កិច្ចការ":"act","រ៉ូម":"rom","១កូរិនថូស":"1co","២កូរិនថូស":"2co","កាឡាទី":"gal","អេភេសូ":"eph","ភីលីព":"phi","កូឡូស":"col","១ថេស្សាឡូនិក":"1th","២ថេស្សាឡូនិក":"2th","១ធីម៉ូថេ":"1ti","២ធីម៉ូថេ":"2ti","ទីតុស":"tit","ភីលេម៉ូន":"phm","ហេប្រឺ":"heb","យ៉ាកុប":"jam","១ពេត្រុស":"1pe","២ពេត្រុស":"2pe","១យ៉ូហាន":"1jo","២យ៉ូហាន":"2jo","៣យ៉ូហាន":"3jo","យូដាស":"jud","វិវរណៈ":"rev","ទំនុកដំកើង":"psa"}};
+function baOpen(){
+  if(!BA.P){BA.P=(async()=>{
+    const [buf,mod]=await Promise.all([fetch('km-khsv-audio.slab').then(r=>{if(!r.ok)throw Error('slab '+r.status);return r.arrayBuffer()}),fetch('peak.wasm').then(r=>{if(!r.ok)throw Error('peak.wasm '+r.status);return r.arrayBuffer()}).then(b=>WebAssembly.compile(b))]);
+    const x=(await WebAssembly.instantiate(mod,{})).exports;
+    const src=x.malloc(buf.byteLength);new Uint8Array(x.memory.buffer).set(new Uint8Array(buf),src);
+    if(x.load_peak(src,buf.byteLength,0))throw Error('load_peak');
+    const Q=512,B=131213+1024,q=x.malloc(Q*2+B),res=q+Q*2;x.peak_init(q,Q,q+Q,Q,res,B);
+    const enc=new TextEncoder(),dec=new TextDecoder(),mem=()=>new Uint8Array(x.memory.buffer);
+    return{get(word){mem().set(enc.encode(word+'\0'),q);x.init_search(1,0);const out=[];
+      for(let n;(n=x.get_result(1))>0;){const r=mem().subarray(res,res+n),z=r.indexOf(0),h=dec.decode(r.subarray(0,z)).split('\t');out.push({details:h.slice(1,-1).join(),bytes:r.slice(z+1)})}
+      return out}};
+  })();BA.P.catch(()=>{BA.P=null})}
+  return BA.P;
+}
+function baRef(ref){
+  const t=String(ref).replace(/[០-៩]/g,c=>c.charCodeAt(0)-0x17e0);
+  const m=t.match(/^(.+?)\s*(\d+)\s*[:：]\s*(\d+)(?:\s*[-–—]\s*(\d+))?\s*$/);if(!m)return null;
+  const code=BA.books[m[1].replace(/[\s​]/g,'')];if(!code)return null;
+  return{code,ch:+m[2],v1:+m[3],v2:m[4]?+m[4]:+m[3]};
+}
+function baTimes(bytes){const first=[],starts=[],ends=[];let at=0,t=0;
+  const num=()=>{let n=0,s=0,c;do{c=bytes[at++];n|=(c&127)<<s;s+=7}while(c>127);return n};
+  while(at<bytes.length){first.push(starts.length);for(let n=num();n--;){starts.push(t+=num()*2);ends.push(bytes[at]?0:(at++,t+num()*2))}}
+  first.push(starts.length);return{first,starts,ends}}
+async function baVoice(x,s,n){
+  if(BA.voices[n])return BA.voices[n];
+  const v=s.get('tnefar'+n)[0].bytes,end=4+new DataView(v.buffer,v.byteOffset).getUint32(0,true);
+  const name=new TextDecoder().decode(v.subarray(end)).replace(/\0.*$/,'').trim();let pf=null;
+  try{if(name){const r=await fetch('pf/'+name+'.bin');if(r.ok)pf=new Uint8Array(await r.arrayBuffer())}}catch(e){}
+  const all=new Uint8Array(end+(pf?pf.length:0));all.set(v.subarray(0,end));if(pf)all.set(pf,end);
+  return BA.voices[n]=[tnPut(x,all),all.length];
+}
+function baHas(ref){return !!baRef(ref)}
+/* plays one verse (or range); resolves when scheduled, calls st('loading'|'playing'|'done'|'err:'+msg) */
+async function baPlay(ref,st){
+  const R=baRef(ref);if(!R)throw Error('no-map');
+  unlockAudio();const ctx=tnCtxGet();try{ctx.resume()}catch(e){}
+  tnStop();const tok=tnTok;st('loading');
+  const s=await baOpen(),x=await tnWasm();if(tok!==tnTok)return;
+  const key=R.code+' '+R.ch,recs=s.get(key),tm=s.get(key+' km-khsv');
+  if(!recs.length||!tm.length)throw Error('no-audio');
+  const r=baTimes(tm[0].bytes),nv=r.first.length-1;if(R.v1>nv)throw Error('no-verse');
+  const v2=Math.min(R.v2,nv),from=r.starts[r.first[R.v1-1]],to=(r.ends[r.first[v2]-1]||r.starts[r.first[v2]]||r.starts[r.first[v2]-1]+100)+3;
+  const vp=await baVoice(x,s,recs[0].details);if(tok!==tnTok)return;
+  if(!BA.ch||BA.ch.key!==key){if(BA.ch){x.tnefar_close(BA.ch.h);x.free(BA.ch.p)}BA.ch=null;
+    const u=recs[0].bytes,p=tnPut(x,u),h=x.tnefar_open(p,u.length,vp[0],vp[1]);if(h<0){x.free(p);throw Error('decode '+h)}BA.ch={key,h,p}}
+  const h=BA.ch.h;x.tnefar_seek(h,from);
+  let left=(to-from)*160,buf=[],bl=0;
+  const sched=final=>{if(!bl)return;const a=new Float32Array(bl);let o=0;for(const q of buf){a.set(q,o);o+=q.length}buf=[];bl=0;
+    if(final){const f=Math.min(480,a.length);for(let i=0;i<f;i++)a[a.length-1-i]*=i/f}
+    const b=ctx.createBuffer(1,a.length,16000),n=ctx.createBufferSource();b.copyToChannel(a,0);n.buffer=b;n.connect(ctx.destination);
+    const at=Math.max(tnAt,ctx.currentTime+.05);n.start(at);tnAt=at+b.duration;tnSrcs.push(n);
+    n.onended=()=>{tnSrcs=tnSrcs.filter(z=>z!==n);if(final&&tok===tnTok)st('done')}};
+  st('playing');
+  for(let k;left>0&&(k=x.tnefar_run(h,16))>0;){
+    const pcm=new Float32Array(x.memory.buffer,x.tnefar_pcm(h),Math.min(k,left)).slice();left-=pcm.length;buf.push(pcm);bl+=pcm.length;
+    if(bl>=8000&&left>0)sched(false);
+    await new Promise(z=>setTimeout(z,0));if(tok!==tnTok)return;
+  }
+  sched(true);
+}
 function tnSpeak(t,queue){
   const k=tnKey(t),tok=tnTok;unlockAudio();
   try{tnCtxGet().resume()}catch(e){setAud('🔇 Audio: this browser has no audio output ('+e.message+')');tts(t,queue);return}
@@ -1007,7 +1071,7 @@ function msgBtn(text,label,fn){
 }
 function begin(){
   VS.trail=[];VS.pq=-1;run=RACE.on?(VS.on?RACE.items.slice():seededShuffle(RACE.items,RACE.seed)):VS.on?VS.items.slice():shuffle(parse().filter(x=>x.en&&x.km));v=SPEED[RACE.on?RACE.diff:diff];LAY.seed=layoutSeed();TH=THEMES[hashStr('th'+LAY.seed)%THEMES.length];obs=plan(run.length);cam=camT=0;petD=-60;petY=0;
-  d=0;y=0;air=false;fell=false;rot=0;jumpReq=0;coy=0;parts=[];flash=0;shake=0;att++;tPlay=0;fail=null;pAcc=0;mode='play';
+  pickedQ=-1;d=0;y=0;air=false;fell=false;rot=0;jumpReq=0;coy=0;parts=[];flash=0;shake=0;att++;tPlay=0;fail=null;pAcc=0;mode='play';
   $('msg').textContent='';$('msg').className='msg';$('pausePanel').classList.add('hidden');
   setQ(0);last=performance.now();const g=++loopGen;requestAnimationFrame(t=>loop(t,g));
   if(RACE.on)raceTick(true);
@@ -1024,7 +1088,7 @@ function setQ(i){
 function pick(n){
   if(mode!=='play'||qi>=run.length)return;
   const km=opts[n],b=$('opts').children[n];if(!VS.on)speak(km);
-  if(km===run[qi].km){if(VS.on&&VS.pq!==qi){VS.pq=qi;VS.trail.push(km);if(VS.trail.length>3)VS.trail.shift()}jumpReq=.14;flash=.14;b.classList.add('ok');setTimeout(()=>b.classList.remove('ok'),220)}
+  if(km===run[qi].km){if(VS.on&&VS.pq!==qi){VS.pq=qi;VS.trail.push(km);if(VS.trail.length>3)VS.trail.shift()}pickedQ=qi;jumpReq=.14;flash=.14;b.classList.add('ok');setTimeout(()=>b.classList.remove('ok'),220)}
   else{b.classList.add('bad');if(VS.on)die('Not quite. The next words were “'+run[qi].km+'”');else{speak(run[qi].km,true);die('Wrong! '+run[qi].en+' = '+run[qi].km)}}
 }
 document.addEventListener('keydown',e=>{if($('game').classList.contains('hidden'))return;if(e.key==='1'||e.key==='2')pick(+e.key-1);if(e.key==='Enter'&&mode==='dead')begin()});
@@ -1070,6 +1134,7 @@ function step(dt){
   for(const o of os)if(o.rg)for(const r of o.rg)if(r.pa!==att&&d>=r.x){r.pa=att;if(Math.abs(y+B/2-r.h)<46){flash=Math.max(flash,.25);for(let i=0;i<18;i++){const a=i/18*6.283;parts.push({k:1,x:r.x,y:r.h,vx:Math.cos(a)*150,vy:Math.sin(a)*150+40,l:.55,m:.55,col:'255,215,80'})}}}
   if((f===-Infinity&&y<hzAt(d,os)-14)||y<-3000){die(TH.hz==='lava'?'Fell in the lava!':'Fell in the '+({water:'water',void:'void',potion:'potion',acid:'acid',icewater:'icy water',sand:'quicksand'}[TH.hz]||'hazard')+'!');return}
   pAcc+=dt;if(pAcc>.03){pAcc=0;parts.push({k:0,x:d,y:y,l:.3,m:.3})}
+  if(qi<run.length-1&&pickedQ===qi&&air&&jumpReq<=0&&d-s+L>obs[qi].x1+6&&d-s<=obs[qi].x0+B){qi++;setQ(qi)}
   if(qi<run.length&&d>obs[qi].x1+B){qi++;if(qi<run.length)setQ(qi);else{$('q').textContent='🏁';$('opts').innerHTML=''}}
   if(qi>=run.length&&d>obs[obs.length-1].x1+B+240)win();
 }
@@ -1443,7 +1508,10 @@ function openVerse(v){
     $('vrinfo').textContent=vWords(v.text).length+' words · '+Object.keys(v.unk).length+' marked as unknown · '+(v.prog|0)+'% through'+(v.done?' · ✓ memorized ×'+v.done:'');
   };
   draw();
-  $('vrplay').onclick=()=>{$('vread').classList.add('hidden');playVerse(v)};
+  {const lb=$('vrlisten'),au=$('vraud'),ok=baHas(v.ref);lb.classList.toggle('hidden',!ok);au.textContent=ok?'Audio: Khmer Audio Bible ℗ 2024 Davar Partners International; Khmer Standard Version © 2005 United Bible Societies, Bible Society in Cambodia. Free to share, not for sale. The first time you listen it downloads about 36 MB.':'';
+    lb.textContent='🔊 Listen';lb.onclick=()=>{if(lb.dataset.on){tnStop();delete lb.dataset.on;lb.textContent='🔊 Listen';return}
+      lb.dataset.on=1;baPlay(v.ref,t=>{if(t==='loading')lb.textContent='⏳ Loading audio…';else if(t==='playing')lb.textContent='⏹ Stop';else if(t==='done'){delete lb.dataset.on;lb.textContent='🔊 Listen'}}).catch(e=>{delete lb.dataset.on;lb.textContent='🔊 Listen';au.textContent='Audio isn\u2019t available for this verse here ('+(e&&e.message||e)+').'})}}
+  $('vrplay').onclick=()=>{tnStop();$('vread').classList.add('hidden');playVerse(v)};
   $('vread').classList.remove('hidden');
 }
 $('vrback').onclick=()=>$('vread').classList.add('hidden');
