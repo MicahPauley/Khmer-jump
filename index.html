@@ -1715,11 +1715,14 @@ function playVerse(v){
 }
 function vCred(){try{return JSON.parse(localStorage.getItem('khmerVCred')||'{}')}catch(e){return{}}}
 function vFirst(key,already){const c=vCred();if(c[key]||already)return false;c[key]=1;try{localStorage.setItem('khmerVCred',JSON.stringify(c))}catch(e){}return true}
+function vCredit(){ /* every word in the verse: new -> learned (new words), already known -> reviewed */
+  let nw=0,rv=0;try{for(const x of run){for(const w of vWords(x.km||'')){const k=vKey(w);if(!k)continue;if(S.learned[k])rv++;else{S.learned[k]=1;nw++}}}}catch(e){}
+  S.reviewed=(S.reviewed|0)+rv;return{nw,rv}}
 function vWin(){
   mode='dead';fail='';$('q').textContent='🎉 '+VS.ref;$('opts').innerHTML='';
   let first=true;{const vv=VS.id&&VL.find(x=>x.id===VS.id);if(vv){first=vFirst(VS.ref+'|'+VS.nwords,vv.done|0);vv.prog=100;vv.done=(vv.done|0)+1;vSaveAll()}else first=vFirst(VS.ref+'|'+VS.nwords,0)}
-  const before=S.vmem|0;S.vmem=before+(first?VS.nwords:0);if(!first)S.reviewed=(S.reviewed|0)+VS.nwords;const got=AURAS.filter(a=>a.thr>before&&a.thr<=S.vmem);saveStore();
-  msgBtn('Verse complete! '+(first?VS.nwords+' new words memorized, ':'Already memorized, no new words counted, ')+att+' attempt'+(att>1?'s':'')+'. '+(got.length?'✨ New aura: '+got[got.length-1].name+'!':'')+' ('+(S.vmem|0).toLocaleString()+' total)','Play again',()=>{att=0;begin()});
+  const before=S.vmem|0;S.vmem=before+(first?VS.nwords:0);const cr=vCredit();const got=AURAS.filter(a=>a.thr>before&&a.thr<=S.vmem);saveStore();
+  msgBtn('Verse complete! '+(first?VS.nwords+' new words memorized, ':'Already memorized, ')+cr.nw+' new + '+cr.rv+' reviewed words, '+att+' attempt'+(att>1?'s':'')+'. '+(got.length?'✨ New aura: '+got[got.length-1].name+'!':'')+' ('+(S.vmem|0).toLocaleString()+' total)','Play again',()=>{att=0;begin()});
   draw();
 }
 function vSetQ(i){
@@ -2289,7 +2292,7 @@ function raceTick(force){
   try{FB.roomUpdate(RACE.code,'players/'+FB.uid(),{d:Math.round(d),y:Math.round(y),q:qi,x:mode==='dead'?1:0,a:att}).catch(()=>{})}catch(e){}
 }
 function raceWin(){
-  mode='spec';RACE.spec=true;RACE.conf=[];fail='';if(VS.on){if(vFirst(VS.ref+'|'+VS.nwords,0)){S.vmem=(S.vmem|0)+VS.nwords}else{S.reviewed=(S.reviewed|0)+VS.nwords}saveStore()}else{reviewWords(run);learnWords(run)}
+  mode='spec';RACE.spec=true;RACE.conf=[];fail='';if(VS.on){if(vFirst(VS.ref+'|'+VS.nwords,0)){S.vmem=(S.vmem|0)+VS.nwords}vCredit();saveStore()}else{reviewWords(run);learnWords(run)}
   $('q').textContent='🏁 Finished!';$('opts').innerHTML='';
   RACE.fin=true;RACE.sig='';
   const me=FB.uid(),ms=Date.now()-RACE.t0;
