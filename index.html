@@ -65,6 +65,8 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 #wc{position:absolute;top:calc(8px + env(safe-area-inset-top));left:calc(12px + env(safe-area-inset-left));z-index:2;color:#fff;opacity:.8;font-size:12px;font-weight:700;letter-spacing:.3px}
 #audst{color:#fff;opacity:.75;font-size:12px;margin:0}#audst:empty{display:none}
 #login{position:absolute;top:calc(6px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:14px;padding:5px 11px;font-size:12px;font-weight:700}
+#mpbtn{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
+.mpd{padding:7px 14px;border-radius:999px}.mpd.sel{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:800}
 #sync{color:#fff;opacity:.75;font-size:12px;margin:0}
 .lvlist{flex:1;min-height:80px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
 .lvcard{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
@@ -72,6 +74,7 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 .pbar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin:6px 0 2px}.pbar i{display:block;height:100%;background:var(--acc);border-radius:99px}.pbar.full i{background:#2ecc71}
 #gprog{position:absolute;left:0;right:0;top:0;height:4px;background:rgba(255,255,255,.12);z-index:3}#gprog i{display:block;height:100%;width:0;background:#f28c1b;transition:width .3s}
 .lvcard button{padding:8px 12px;flex:none}
+.lvcard.rec{opacity:.6;border-style:dashed;background:transparent}.lvcard.rec:hover,.lvcard.rec:focus-within{opacity:.95}
 .opts button.ok{border-color:#2ecc71!important;background:rgba(46,204,113,.35)!important}
 .opts button.bad{border-color:#e74c3c!important}
 .stage{flex:1;min-height:0;position:relative}
@@ -107,6 +110,7 @@ body.noipa .ip{display:none}
     <button class="pri" id="start">▶ PLAY</button>
     <p id="curlv"></p>
     <div class="row2"><button id="edit">✎ My words</button><button id="lvbtn">★ Levels</button><button id="storebtn">🛒 Store</button></div>
+    <button id="mpbtn" class="hidden">👥 Multiplayer</button>
     <button id="fillT" class="hidden">✨ Fill in</button>
     <p id="sync">…</p>
     <p id="audst"></p>
@@ -146,6 +150,31 @@ body.noipa .ip{display:none}
   <div class="lvlist" id="lvlist"></div>
   <p class="hint" id="lvempty">No levels yet. Tap “New level”, enter your words, then “Save as level”.</p>
   <div class="row"><button class="pri" id="lvnew">＋ New level</button><button id="lvdone" style="margin-left:auto">Close</button></div>
+</div>
+
+<div id="mp" class="sheet hidden">
+  <h2>👥 Multiplayer · Live race</h2>
+  <div id="mpHome">
+    <p class="hint">Race up to 4 players on the same level at the same time. Everyone needs to be signed in. The first to the finish wins.</p>
+    <div class="row" style="margin:12px 0"><button class="pri" id="mpHost">Host a race</button></div>
+    <p class="hint">Or join a friend’s race with their 4-letter code:</p>
+    <div class="row" style="margin-top:6px"><input id="mpCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" style="text-transform:uppercase;letter-spacing:6px;text-align:center;font-weight:800;max-width:160px"><button id="mpJoin">Join</button></div>
+    <div class="row" style="margin-top:14px"><button id="mpBack">Close</button></div>
+  </div>
+  <div id="mpPick" class="hidden" style="flex:1;min-height:0;display:flex;flex-direction:column;gap:8px">
+    <p class="hint">Choose the speed and the level for this race:</p>
+    <div class="row" id="mpDiff"><button class="mpd" data-d="easy">Easy</button><button class="mpd" data-d="medium">Medium</button><button class="mpd" data-d="hard">Hard</button></div>
+    <div class="lvlist" id="mpLv"></div>
+    <p class="hint hidden" id="mpNoLv">You have no saved levels yet. Save one under ★ Levels first.</p>
+    <div class="row"><button id="mpPickBack">Back</button></div>
+  </div>
+  <div id="mpLobby" class="hidden" style="flex:1;min-height:0;display:flex;flex-direction:column;gap:8px">
+    <div style="text-align:center"><div class="hint">Room code — tell your friends</div><div id="mpCodeBig" style="font-size:42px;line-height:1.1;font-weight:900;letter-spacing:10px"></div><div class="hint" id="mpInfo"></div></div>
+    <div class="lvlist" id="mpPlayers"></div>
+    <p class="hint hidden" id="mpWait">Waiting for the host to start the race…</p>
+    <div class="row"><button class="pri" id="mpStart">▶ Start race</button><button id="mpLeave" style="margin-left:auto">Leave</button></div>
+  </div>
+  <p class="hint" id="mpMsg"></p>
 </div>
 
 <div id="game" class="screen hidden">
@@ -229,6 +258,7 @@ const SPEED={easy:260,medium:360,hard:500};
 const TYPES=['spike','lava','gapup','hop','pdouble','hop','drop','stairs','double','rise','pspike','hop','drop','lavawide','block','triple','rise2','hop','pspike','drop','lava','double'];
 const GAPT=[2.3,2.0,2.6,2.2,2.5,2.0,2.4,2.1];
 let run=[],obs=[],d=0,v=0,y=0,qi=0,mode='menu',last=0,opts=[],att=0,fail=null,flash=0,shake=0,parts=[],tPlay=0,loopGen=0,pAcc=0;
+var RACE={on:false,players:{},fin:false,win:null,round:0};
 let air=false,fell=false,s=0,s0=0,y0=0,rot=0,coy=0,jumpReq=0;
 
 function mk(t,x,b){
@@ -377,6 +407,7 @@ function lvRender(){
     };
     c.append(t,play,edit,del);box.appendChild(c);
   }
+  try{recRender(box)}catch(e){}
 }
 $('lvbtn').onclick=()=>{lvRender();$('levels').classList.remove('hidden')};
 $('lvdone').onclick=()=>$('levels').classList.add('hidden');
@@ -394,6 +425,436 @@ $('savelv').onclick=async()=>{
   if(!lvWrite())m.textContent='Could not save here (private browsing?).';
   lvLabel();
 };
+// ---- recommended levels: 3 suggested 20-word levels built from words you do not know yet ----
+const BANK=`Greetings & questions|1|hello|សួស្តី
+Greetings & questions|1|thank you|អរគុណ
+Greetings & questions|1|please|សូម
+Greetings & questions|1|sorry|សុំទោស
+Greetings & questions|1|yes (man)|បាទ
+Greetings & questions|1|yes (woman)|ចាស
+Greetings & questions|1|no|ទេ
+Greetings & questions|1|welcome|ស្វាគមន៍
+Greetings & questions|1|I|ខ្ញុំ
+Greetings & questions|1|you|អ្នក
+Greetings & questions|1|we|យើង
+Greetings & questions|1|name|ឈ្មោះ
+Greetings & questions|1|what|អ្វី
+Greetings & questions|1|who|អ្នកណា
+Greetings & questions|2|why|ហេតុអ្វី
+Greetings & questions|2|how much|ប៉ុន្មាន
+Greetings & questions|2|when|ពេលណា
+Greetings & questions|2|where|ឯណា
+Greetings & questions|2|here|ទីនេះ
+Greetings & questions|2|there|ទីនោះ
+Greetings & questions|2|again|ម្តងទៀត
+Greetings & questions|2|together|ជាមួយគ្នា
+Greetings & questions|3|of course|ពិតប្រាកដ
+Family & people|1|father|ឪពុក
+Family & people|1|mother|ម្តាយ
+Family & people|1|child|កូន
+Family & people|1|older brother|បងប្រុស
+Family & people|1|older sister|បងស្រី
+Family & people|1|younger sibling|ប្អូន
+Family & people|1|friend|មិត្តភក្តិ
+Family & people|1|teacher|គ្រូ
+Family & people|1|man|បុរស
+Family & people|1|woman|ស្ត្រី
+Family & people|1|people|មនុស្ស
+Family & people|1|family|គ្រួសារ
+Family & people|2|grandfather|តា
+Family & people|2|grandmother|យាយ
+Family & people|2|husband|ប្តី
+Family & people|2|wife|ប្រពន្ធ
+Family & people|2|uncle|ពូ
+Family & people|2|aunt|មីង
+Family & people|2|baby|ទារក
+Family & people|2|son|កូនប្រុស
+Family & people|2|daughter|កូនស្រី
+Family & people|2|guest|ភ្ញៀវ
+Family & people|2|neighbor|អ្នកជិតខាង
+Family & people|2|student|សិស្ស
+Family & people|3|relatives|សាច់ញាតិ
+Family & people|3|orphan|កំព្រា
+Body & health|1|head|ក្បាល
+Body & health|1|hand|ដៃ
+Body & health|1|foot|ជើង
+Body & health|1|eye|ភ្នែក
+Body & health|1|mouth|មាត់
+Body & health|1|face|មុខ
+Body & health|1|heart|បេះដូង
+Body & health|2|hair|សក់
+Body & health|2|ear|ត្រចៀក
+Body & health|2|nose|ច្រមុះ
+Body & health|2|tooth|ធ្មេញ
+Body & health|2|tongue|អណ្តាត
+Body & health|2|finger|ម្រាមដៃ
+Body & health|2|stomach|ពោះ
+Body & health|2|back|ខ្នង
+Body & health|2|blood|ឈាម
+Body & health|2|body|រាងកាយ
+Body & health|2|sick|ឈឺ
+Body & health|2|medicine|ថ្នាំ
+Body & health|2|doctor|គ្រូពេទ្យ
+Body & health|3|bone|ឆ្អឹង
+Body & health|3|skin|ស្បែក
+Body & health|3|shoulder|ស្មា
+Body & health|3|knee|ជង្គង់
+Body & health|3|hospital|មន្ទីរពេទ្យ
+Body & health|3|health|សុខភាព
+Food & drink|1|rice|បាយ
+Food & drink|1|water|ទឹក
+Food & drink|1|fish|ត្រី
+Food & drink|1|meat|សាច់
+Food & drink|1|eat|ញ៉ាំ
+Food & drink|1|drink|ផឹក
+Food & drink|1|delicious|ឆ្ងាញ់
+Food & drink|1|hungry|ឃ្លាន
+Food & drink|1|thirsty|ស្រេក
+Food & drink|2|fruit|ផ្លែឈើ
+Food & drink|2|vegetable|បន្លែ
+Food & drink|2|banana|ចេក
+Food & drink|2|mango|ស្វាយ
+Food & drink|2|coconut|ដូង
+Food & drink|2|salt|អំបិល
+Food & drink|2|sugar|ស្ករ
+Food & drink|2|soup|សម្ល
+Food & drink|2|noodles|មី
+Food & drink|2|bread|នំបុ័ង
+Food & drink|2|coffee|កាហ្វេ
+Food & drink|2|tea|តែ
+Food & drink|2|ice|ទឹកកក
+Food & drink|2|sweet|ផ្អែម
+Food & drink|2|sour|ជូរ
+Food & drink|2|egg|ពង
+Food & drink|2|pork|សាច់ជ្រូក
+Food & drink|2|beef|សាច់គោ
+Food & drink|3|pineapple|ម្នាស់
+Food & drink|3|papaya|ល្ហុង
+Food & drink|3|watermelon|ឪឡឹក
+Food & drink|3|garlic|ខ្ទឹមស
+Food & drink|3|potato|ដំឡូង
+Food & drink|3|pepper|ម្រេច
+Food & drink|3|spoon|ស្លាបព្រា
+Food & drink|3|plate|ចាន
+Food & drink|3|knife|កាំបិត
+Nature & weather|1|sun|ព្រះអាទិត្យ
+Nature & weather|1|moon|ព្រះច័ន្ទ
+Nature & weather|1|sky|មេឃ
+Nature & weather|1|rain|ភ្លៀង
+Nature & weather|1|fire|ភ្លើង
+Nature & weather|1|tree|ដើមឈើ
+Nature & weather|1|flower|ផ្កា
+Nature & weather|1|mountain|ភ្នំ
+Nature & weather|2|star|ផ្កាយ
+Nature & weather|2|cloud|ពពក
+Nature & weather|2|wind|ខ្យល់
+Nature & weather|2|river|ទន្លេ
+Nature & weather|2|forest|ព្រៃ
+Nature & weather|2|grass|ស្មៅ
+Nature & weather|2|ground|ដី
+Nature & weather|2|stone|ថ្ម
+Nature & weather|2|sea|សមុទ្រ
+Nature & weather|2|lake|បឹង
+Nature & weather|2|rice field|ស្រែ
+Nature & weather|2|leaf|ស្លឹក
+Nature & weather|2|hot|ក្តៅ
+Nature & weather|2|cold|ត្រជាក់
+Nature & weather|3|storm|ព្យុះ
+Nature & weather|3|island|កោះ
+Nature & weather|3|rainy season|រដូវភ្លៀង
+Nature & weather|3|dry season|រដូវប្រាំង
+Nature & weather|3|darkness|ងងឹត
+Nature & weather|3|light|ពន្លឺ
+Animals|1|dog|ឆ្កែ
+Animals|1|cat|ឆ្មា
+Animals|1|bird|បក្សី
+Animals|1|chicken|មាន់
+Animals|1|pig|ជ្រូក
+Animals|1|cow|គោ
+Animals|1|animal|សត្វ
+Animals|2|duck|ទា
+Animals|2|buffalo|ក្របី
+Animals|2|elephant|ដំរី
+Animals|2|snake|ពស់
+Animals|2|monkey|ស្វា
+Animals|2|tiger|ខ្លា
+Animals|2|horse|សេះ
+Animals|2|mouse|កណ្តុរ
+Animals|2|frog|កង្កែប
+Animals|2|ant|ស្រមោច
+Animals|2|mosquito|មូស
+Animals|3|insect|សត្វល្អិត
+Animals|3|butterfly|មេអំបៅ
+Animals|3|crocodile|ក្រពើ
+Animals|3|rabbit|ទន្សាយ
+Animals|3|bee|ឃ្មុំ
+Animals|3|turtle|អណ្ដើក
+Home & things|1|house|ផ្ទះ
+Home & things|1|door|ទ្វារ
+Home & things|1|room|បន្ទប់
+Home & things|1|book|សៀវភៅ
+Home & things|1|money|លុយ
+Home & things|1|phone|ទូរស័ព្ទ
+Home & things|2|window|បង្អួច
+Home & things|2|bed|គ្រែ
+Home & things|2|table|តុ
+Home & things|2|chair|កៅអី
+Home & things|2|roof|ដំបូល
+Home & things|2|key|សោ
+Home & things|2|lamp|ចង្កៀង
+Home & things|2|paper|ក្រដាស
+Home & things|2|bag|កាបូប
+Home & things|2|shirt|អាវ
+Home & things|2|pants|ខោ
+Home & things|2|hat|មួក
+Home & things|2|shoes|ស្បែកជើង
+Home & things|3|mat|កន្ទេល
+Home & things|3|skirt|សំពត់
+Home & things|3|clothes|សម្លៀកបំពាក់
+Home & things|3|well|អណ្តូង
+Home & things|3|fence|របង
+Town & travel|1|road|ផ្លូវ
+Town & travel|1|market|ផ្សារ
+Town & travel|1|school|សាលា
+Town & travel|1|village|ភូមិ
+Town & travel|1|car|ឡាន
+Town & travel|1|motorbike|ម៉ូតូ
+Town & travel|1|bicycle|កង់
+Town & travel|1|boat|ទូក
+Town & travel|2|city|ទីក្រុង
+Town & travel|2|country|ប្រទេស
+Town & travel|2|shop|ហាង
+Town & travel|2|bridge|ស្ពាន
+Town & travel|2|temple|វត្ត
+Town & travel|2|left|ឆ្វេង
+Town & travel|2|right|ស្តាំ
+Town & travel|2|near|ជិត
+Town & travel|2|far|ឆ្ងាយ
+Town & travel|2|price|តម្លៃ
+Town & travel|2|expensive|ថ្លៃ
+Town & travel|2|cheap|ថោក
+Town & travel|3|airplane|យន្តហោះ
+Town & travel|3|train|រថភ្លើង
+Town & travel|3|ticket|សំបុត្រ
+Town & travel|3|hotel|សណ្ឋាគារ
+Town & travel|3|border|ព្រំដែន
+Town & travel|3|province|ខេត្ត
+Town & travel|3|police|ប៉ូលិស
+Town & travel|3|north|ខាងជើង
+Town & travel|3|south|ខាងត្បូង
+Town & travel|3|east|ខាងកើត
+Town & travel|3|west|ខាងលិច
+Time & numbers|1|one|មួយ
+Time & numbers|1|two|ពីរ
+Time & numbers|1|three|បី
+Time & numbers|1|four|បួន
+Time & numbers|1|five|ប្រាំ
+Time & numbers|1|ten|ដប់
+Time & numbers|1|day|ថ្ងៃ
+Time & numbers|1|night|យប់
+Time & numbers|1|morning|ព្រឹក
+Time & numbers|1|now|ឥឡូវ
+Time & numbers|2|six|ប្រាំមួយ
+Time & numbers|2|seven|ប្រាំពីរ
+Time & numbers|2|eight|ប្រាំបី
+Time & numbers|2|nine|ប្រាំបួន
+Time & numbers|2|twenty|ម្ភៃ
+Time & numbers|2|hundred|រយ
+Time & numbers|2|today|ថ្ងៃនេះ
+Time & numbers|2|tomorrow|ថ្ងៃស្អែក
+Time & numbers|2|yesterday|ម្សិលមិញ
+Time & numbers|2|afternoon|រសៀល
+Time & numbers|2|evening|ល្ងាច
+Time & numbers|2|week|សប្តាហ៍
+Time & numbers|2|month|ខែ
+Time & numbers|2|year|ឆ្នាំ
+Time & numbers|3|thousand|ពាន់
+Time & numbers|3|zero|សូន្យ
+Time & numbers|3|half|ពាក់កណ្តាល
+Time & numbers|3|hour|ម៉ោង
+Time & numbers|3|minute|នាទី
+Time & numbers|3|always|ជានិច្ច
+Time & numbers|3|sometimes|ពេលខ្លះ
+Time & numbers|3|many|ច្រើន
+Time & numbers|3|few|តិច
+Time & numbers|3|all|ទាំងអស់
+Action words|1|go|ទៅ
+Action words|1|come|មក
+Action words|1|sleep|ដេក
+Action words|1|walk|ដើរ
+Action words|1|run|រត់
+Action words|1|sit|អង្គុយ
+Action words|1|see|មើល
+Action words|1|speak|និយាយ
+Action words|1|want|ចង់
+Action words|1|love|ស្រឡាញ់
+Action words|2|stand|ឈរ
+Action words|2|wake up|ក្រោក
+Action words|2|read|អាន
+Action words|2|write|សរសេរ
+Action words|2|learn|រៀន
+Action words|2|teach|បង្រៀន
+Action words|2|give|ឲ្យ
+Action words|2|take|យក
+Action words|2|buy|ទិញ
+Action words|2|sell|លក់
+Action words|2|know|ដឹង
+Action words|2|think|គិត
+Action words|2|work|ធ្វើការ
+Action words|2|play|លេង
+Action words|2|help|ជួយ
+Action words|2|wait|រង់ចាំ
+Action words|2|ask|សួរ
+Action words|2|answer|ឆ្លើយ
+Action words|2|open|បើក
+Action words|2|close|បិទ
+Action words|2|wash|លាង
+Action words|2|sing|ច្រៀង
+Action words|2|dance|រាំ
+Action words|2|laugh|សើច
+Action words|2|cry|យំ
+Action words|3|forget|ភ្លេច
+Action words|3|remember|ចាំ
+Action words|3|understand|យល់
+Action words|3|find|រក
+Action words|3|bring|នាំ
+Action words|3|return|ត្រឡប់
+Action words|3|finish|ចប់
+Action words|3|plant|ដាំ
+Action words|3|harvest|ច្រូត
+Action words|3|listen|ស្តាប់
+Describing words|1|big|ធំ
+Describing words|1|small|តូច
+Describing words|1|good|ល្អ
+Describing words|1|bad|អាក្រក់
+Describing words|1|new|ថ្មី
+Describing words|1|old|ចាស់
+Describing words|1|beautiful|ស្អាត
+Describing words|1|happy|សប្បាយ
+Describing words|2|tall|ខ្ពស់
+Describing words|2|long|វែង
+Describing words|2|short|ខ្លី
+Describing words|2|fast|លឿន
+Describing words|2|slow|យឺត
+Describing words|2|heavy|ធ្ងន់
+Describing words|2|difficult|ពិបាក
+Describing words|2|easy|ងាយ
+Describing words|2|tired|នឿយ
+Describing words|2|angry|ខឹង
+Describing words|2|afraid|ខ្លាច
+Describing words|2|strong|ខ្លាំង
+Describing words|2|full|ពេញ
+Describing words|3|weak|ខ្សោយ
+Describing words|3|poor|ក្រីក្រ
+Describing words|3|rich|ស្តុកស្តម្ភ
+Describing words|3|empty|ទទេ
+Describing words|3|true|ពិត
+Describing words|3|light (weight)|ស្រាល
+Colors|1|red|ក្រហម
+Colors|1|blue|ខៀវ
+Colors|1|green|បៃតង
+Colors|1|yellow|លឿង
+Colors|1|white|ស
+Colors|1|black|ខ្មៅ
+Colors|2|color|ពណ៌
+Church & faith|1|God|ព្រះជាម្ចាស់
+Church & faith|1|church|ព្រះវិហារ
+Church & faith|1|Bible|ព្រះគម្ពីរ
+Church & faith|1|pray|អធិស្ឋាន
+Church & faith|2|Jesus|ព្រះយេស៊ូ
+Church & faith|2|faith|ជំនឿ
+Church & faith|2|believe|ជឿ
+Church & faith|2|sin|បាប
+Church & faith|2|forgive|អត់ទោស
+Church & faith|2|heaven|ស្ថានសួគ៌
+Church & faith|2|cross|ឈើឆ្កាង
+Church & faith|2|joy|អំណរ
+Church & faith|2|peace|សន្តិភាព
+Church & faith|2|hope|សង្ឃឹម
+Church & faith|2|life|ជីវិត
+Church & faith|2|worship|ថ្វាយបង្គំ
+Church & faith|2|praise|សរសើរ
+Church & faith|3|grace|ព្រះគុណ
+Church & faith|3|truth|សេចក្តីពិត
+Church & faith|3|king|ស្តេច
+Church & faith|3|kingdom|នគរ
+Church & faith|3|angel|ទេវតា
+Church & faith|3|glory|សិរីរុងរឿង
+Church & faith|3|spirit|វិញ្ញាណ
+Church & faith|3|repent|ប្រែចិត្ត
+Church & faith|3|gospel|ដំណឹងល្អ
+Church & faith|3|blessing|ពរ
+Church & faith|3|pastor|គ្រូគង្វាល`.split('\n').map(l=>{const p=l.split('|');return{c:p[0],t:+p[1],en:p[2],km:p[3]}});
+function nk(s){return String(s||'').replace(/[​\s]/g,'')}
+function recKnown(){
+  const km=new Set(),en=new Set();let len=0,cnt=0;
+  const add=t=>{let a=[];try{a=parseText(t||'')}catch(e){}for(const x of a){if(x.km){km.add(nk(x.km));len+=nk(x.km).length;cnt++}if(x.en)en.add(x.en.toLowerCase().trim())}};
+  try{add($('words').value)}catch(e){}
+  for(const l of LV)add(l&&l.text);
+  for(const k in S.learned)km.add(nk(k));
+  const interest={};
+  for(const b of BANK)if(km.has(nk(b.km))||en.has(b.en.toLowerCase()))interest[b.c]=(interest[b.c]||0)+1;
+  const skill=km.size*(cnt&&len/cnt>8?1.4:1);
+  return{km,en,interest,skill};
+}
+function recW(s){return s<40?{1:.7,2:.3,3:0}:s<120?{1:.2,2:.65,3:.15}:s<300?{1:.05,2:.5,3:.45}:{1:0,2:.3,3:.7}}
+function recGen(used,usedCat,slot){
+  const K=recKnown(),w=recW(K.skill);
+  const cand=BANK.filter(b=>!K.km.has(nk(b.km))&&!K.en.has(b.en.toLowerCase())&&!used.has(nk(b.km)));
+  if(cand.length<5)return null;
+  const cats={};for(const b of cand)(cats[b.c]=cats[b.c]||[]).push(b);
+  let names=Object.keys(cats).filter(c=>!usedCat.has(c)&&cats[c].length>=8);
+  if(!names.length)names=Object.keys(cats);
+  let pick;
+  if(slot>=2){pick=names[Math.random()*names.length|0]}
+  else{const ws=names.map(c=>1+3*(K.interest[c]||0));let r=Math.random()*ws.reduce((a,b)=>a+b,0);pick=names[0];for(let i=0;i<names.length;i++){r-=ws[i];if(r<=0){pick=names[i];break}}}
+  const sc=b=>w[b.t]+Math.random()*.5+(b.c===pick?2:0);
+  const chosen=cand.slice().sort((a,b)=>sc(b)-sc(a)).slice(0,20);
+  const own=chosen.filter(b=>b.c===pick).length;
+  return{id:'r'+Date.now().toString(36)+(Math.random()*1e4|0).toString(36),name:own>=12?pick:'Mixed words',cat:pick,words:chosen.map(b=>[b.en,b.km])};
+}
+var RECS=[];
+function recSave(){try{localStorage.setItem('khmerRecs',JSON.stringify(RECS))}catch(e){}}
+function recFill(){
+  try{RECS=JSON.parse(localStorage.getItem('khmerRecs')||'[]');if(!Array.isArray(RECS))RECS=[]}catch(e){RECS=[]}
+  const K=recKnown();
+  RECS=RECS.filter(r=>r&&Array.isArray(r.words)&&r.words.length>=5&&r.words.filter(x=>K.km.has(nk(x[1]))).length<5);
+  const used=new Set(),cats=new Set();RECS.forEach(r=>{cats.add(r.cat);r.words.forEach(x=>used.add(nk(x[1])))});
+  while(RECS.length<3){const r=recGen(used,cats,RECS.length);if(!r)break;RECS.push(r);cats.add(r.cat);r.words.forEach(x=>used.add(nk(x[1])))}
+  recSave();
+}
+function recText(r){return r.words.map(x=>x[0]+' = '+x[1]).join('\n')}
+function recShuffle(i){
+  const old=RECS[i];if(!old)return;
+  const used=new Set(),cats=new Set();RECS.forEach(r=>{cats.add(r.cat);r.words.forEach(x=>used.add(nk(x[1])))});
+  const r=recGen(used,cats,i);if(r){RECS[i]=r;recSave()}
+  lvRender();
+}
+function recAdd(i,play){
+  const r=RECS[i];if(!r)return;
+  let name=r.name,k=2;const has=n=>LV.some(x=>x.name.toLowerCase()===n.toLowerCase());
+  while(has(name))name=r.name+' '+k++;
+  const l={id:Date.now().toString(36),name,text:recText(r),n:r.words.length,saved:Date.now(),done:0,best:0};
+  LV.push(l);lvWrite();RECS.splice(i,1);recFill();lvLabel();
+  if(play){$('words').value=l.text;curLv=l.id;updCount();lvLabel();$('levels').classList.add('hidden');$('start').click()}else lvRender();
+}
+function recRender(box){
+  recFill();if(!RECS.length)return;
+  const h=document.createElement('div');h.style.marginTop='8px';
+  const hb=document.createElement('b');hb.textContent='✨ Recommended for you';
+  const hs=document.createElement('div');hs.className='hint';hs.textContent='New words picked for where you are now, based on what you have already added and learned. Save one to keep it as a level, or shuffle for a different set.';
+  h.append(hb,hs);box.appendChild(h);
+  RECS.forEach((r,i)=>{
+    const c=document.createElement('div');c.className='lvcard rec';
+    const t=document.createElement('div');t.className='lvt';
+    const nm=document.createElement('b');nm.textContent=r.name;
+    const sub=document.createElement('span');sub.className='hint';sub.textContent=r.words.length+' words · '+r.words.slice(0,4).map(x=>x[0]).join(', ')+'…';
+    t.append(nm,document.createElement('br'),sub);
+    const add=lvBtn('＋ Save'),pl=lvBtn('▶ Play','pri'),sh=lvBtn('↻');sh.title='Shuffle';
+    add.onclick=()=>recAdd(i,false);pl.onclick=()=>recAdd(i,true);sh.onclick=()=>recShuffle(i);
+    c.append(t,add,pl,sh);box.appendChild(c);
+  });
+}
 lvRead();lvLabel();
 function goFull(){try{const el=document.documentElement;(el.requestFullscreen?el.requestFullscreen({navigationUI:'hide'}):Promise.reject()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{})}catch(e){}}
 function leaveFull(){try{if(document.fullscreenElement)document.exitFullscreen();screen.orientation&&screen.orientation.unlock&&screen.orientation.unlock()}catch(e){}}
@@ -410,17 +871,18 @@ $('start').onclick=async()=>{
   att=0;begin();
 };
 function play(on){document.body.classList.toggle('playing',on)}
-$('menuBtn').onclick=()=>{mode='menu';loopGen++;$('msg').textContent='';$('pausePanel').classList.add('hidden');play(false);leaveFull();$('game').classList.add('hidden');$('menu').classList.remove('hidden');startTitle()};
+$('menuBtn').onclick=()=>{if(RACE.on)mpLeave();mode='menu';loopGen++;$('msg').textContent='';$('pausePanel').classList.add('hidden');play(false);leaveFull();$('game').classList.add('hidden');$('menu').classList.remove('hidden');startTitle()};
 
 function msgBtn(text,label,fn){
   const m=$('msg');m.textContent=text+' ';
   const b=document.createElement('button');b.className='pri';b.style.padding='8px 14px';b.textContent=label;b.onclick=fn;m.appendChild(b);
 }
 function begin(){
-  run=shuffle(parse().filter(x=>x.en&&x.km));v=SPEED[diff];obs=plan(run.length);
+  run=RACE.on?seededShuffle(RACE.items,RACE.seed):shuffle(parse().filter(x=>x.en&&x.km));v=SPEED[RACE.on?RACE.diff:diff];obs=plan(run.length);
   d=0;y=0;air=false;fell=false;rot=0;jumpReq=0;coy=0;parts=[];flash=0;shake=0;att++;tPlay=0;fail=null;pAcc=0;mode='play';
   $('msg').textContent='';$('pausePanel').classList.add('hidden');
   setQ(0);last=performance.now();const g=++loopGen;requestAnimationFrame(t=>loop(t,g));
+  if(RACE.on)raceTick(true);
 }
 function setQ(i){
   qi=i;{const g=document.querySelector('#gprog i');if(g)g.style.width=(100*i/Math.max(1,run.length))+'%'}
@@ -439,17 +901,18 @@ function pick(n){
 }
 document.addEventListener('keydown',e=>{if($('game').classList.contains('hidden'))return;if(e.key==='1'||e.key==='2')pick(+e.key-1);if(e.key==='Enter'&&mode==='dead')begin()});
 var pausedFrom='play';
-$('pauseBtn').onclick=()=>{if(mode!=='play'&&mode!=='dead')return;pausedFrom=mode;mode=mode==='play'?'pause':'dead';$('pausePanel').classList.remove('hidden');$('resumeBtn').textContent=pausedFrom==='play'?'▶ Resume':'↩ Back'};
-$('resumeBtn').onclick=()=>{$('pausePanel').classList.add('hidden');if(pausedFrom==='dead'){mode='dead';return}if(mode!=='pause')return;mode='play';last=performance.now();const g=++loopGen;requestAnimationFrame(t=>loop(t,g))};
+$('pauseBtn').onclick=()=>{if(RACE.on){$('pausePanel').querySelector('b').textContent='Race menu — the race keeps going!';$('pausePanel').classList.remove('hidden');$('resumeBtn').textContent='▶ Back to the race';$('menuBtn').textContent='✕ Leave the race';return}$('pausePanel').querySelector('b').textContent='Paused';$('menuBtn').textContent='✕ Quit to menu';if(mode!=='play'&&mode!=='dead')return;pausedFrom=mode;mode=mode==='play'?'pause':'dead';$('pausePanel').classList.remove('hidden');$('resumeBtn').textContent=pausedFrom==='play'?'▶ Resume':'↩ Back'};
+$('resumeBtn').onclick=()=>{$('pausePanel').classList.add('hidden');if(RACE.on)return;if(pausedFrom==='dead'){mode='dead';return}if(mode!=='pause')return;mode='play';last=performance.now();const g=++loopGen;requestAnimationFrame(t=>loop(t,g))};
 
 function die(t){
   if(mode!=='play')return;
-  fail=t;mode='dead';shake=14;
+  fail=t;mode='dead';shake=14;if(RACE.on)raceTick(true);
   {const lvl=LV.find(x=>x.id===curLv);if(lvl&&run.length){const pc=Math.floor(100*qi/run.length);if(pc>(lvl.prog||0)){lvl.prog=pc;lvWrite()}}}
   msgBtn(t,'Restart',begin);
   (function f(){draw();if(shake>.5)requestAnimationFrame(f)})();
 }
 function win(){
+  if(RACE.on){raceWin();return}
   mode='dead';fail='';
   const lvl=LV.find(x=>x.id===curLv);if(lvl){lvl.done=(lvl.done||0)+1;lvl.best=lvl.best?Math.min(lvl.best,att):att;lvl.prog=100;lvWrite()}$('q').textContent='🎉 Level complete!';$('opts').innerHTML='';
   const earn=learnWords(run);
@@ -491,7 +954,7 @@ function loop(now,gen){
   const dt=Math.min((now-last)/1000,.05);last=now;
   const n=Math.max(1,Math.ceil(dt*120));
   for(let i=0;i<n&&mode==='play';i++)step(dt/n);
-  flash*=.9;
+  flash*=.9;if(RACE.on)raceTick();
   for(const p of parts){p.l-=dt;if(p.k){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy-=260*dt}}
   parts=parts.filter(p=>p.l>0);
   if(mode==='play'){draw();requestAnimationFrame(t=>loop(t,gen))}
@@ -567,6 +1030,7 @@ function draw(){
     if(p.k){ctx.fillStyle='rgba(235,225,205,'+(a*.7)+')';ctx.beginPath();ctx.arc(sx(p.x),GY-p.y,2+3*a,0,7);ctx.fill()}
     else{const tcol=hexRgb(colorOf(S.eqC).c);ctx.fillStyle='rgba('+tcol[0]+','+tcol[1]+','+tcol[2]+','+(a*.45)+')';const z=B*.55*a;ctx.fillRect(sx(p.x)-z/2,GY-p.y-B/2-z/2,z,z)}
   }
+  if(RACE.on)raceGhosts(sx,tm);
   ctx.save();ctx.translate(BX,GY-y-B/2);ctx.rotate(rot);
   drawBlock(ctx,B,S.eqS,colorOf(S.eqC),tm,mode==='dead'&&!!fail);
   ctx.restore();
@@ -577,6 +1041,7 @@ function draw(){
     ctx.fillText(Math.min(qi+1,run.length)+' / '+run.length+'   ·   attempt '+att,16,28);
     if(tPlay<3&&mode==='play'){ctx.globalAlpha=Math.min(1,3-tPlay);ctx.font='bold 22px system-ui,sans-serif';ctx.textAlign='center';ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=6;ctx.fillStyle='#fff';ctx.fillText('Tap the right word to JUMP — time it!',W/2,78);ctx.shadowBlur=0;ctx.globalAlpha=1;ctx.textAlign='left'}
   }
+  if(RACE.on&&run.length&&obs.length)raceHud();
   if(flash>.01){ctx.fillStyle='rgba(120,230,150,'+flash+')';ctx.fillRect(0,0,W,H)}
   ctx.restore();
 }
@@ -763,8 +1228,8 @@ function fbSetup(){
   function wire(){
     const FB=window.FB;
     if(!FB){syncMsg('Levels are saved on this device');return}
-    btn.classList.remove('hidden');
-    FB.onUser(async u=>{
+    btn.classList.remove('hidden');$('mpbtn').classList.remove('hidden');
+    FB.onUser(async u=>{window.MYNAME=u?String(u.displayName||u.email||'Player').split(' ')[0].slice(0,12):'';
       cloud.ok=false;cloud.doc=null;btn.dataset.in=u?'1':'';
       if(!u){btn.textContent='Sign in';syncMsg('Saved on this device — sign in to save to your account');return}
       btn.textContent='☁ '+String(u.displayName||u.email||'Signed in').split(' ')[0];
@@ -792,6 +1257,206 @@ function fbSetup(){
     await cloudStart(doc);
   }catch(e){syncMsg(window.claude?'Could not reach your account — levels are saved on this device only':'Levels are saved on this device')}
 })();
+// ---- multiplayer: live race (needs sign-in) ----
+var MP={code:'',host:false,room:null,unsub:null,round:0,left:false,pick:'',diff:'medium'};
+function rnd32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function seededShuffle(a,seed){a=a.slice();const r=rnd32(seed);for(let i=a.length-1;i>0;i--){const j=r()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function myName(){return window.MYNAME||'Player'}
+function myInfo(){return{name:myName(),c:S.eqC,s:S.eqS,d:0,y:0,q:0,x:0,a:1}}
+function mpMsg(t){$('mpMsg').textContent=t||''}
+function mpView(v){for(const k of['mpHome','mpPick','mpLobby'])$(k).classList.toggle('hidden',k!==v)}
+function mpOpen(){
+  if(!window.FB||!FB.uid()){$('mp').classList.remove('hidden');mpView('mpHome');mpMsg('Sign in first (button in the top-right corner of the title screen), then come back.');return}
+  mpMsg('');mpView('mpHome');$('mp').classList.remove('hidden');
+}
+function mpCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let c='';for(let i=0;i<4;i++)c+=A[Math.random()*A.length|0];return c}
+function mpPickRender(){
+  const box=$('mpLv');box.textContent='';let n=0;
+  for(const l of LV.slice().sort((a,b)=>b.saved-a.saved)){
+    const items=parseText(l.text||'').filter(x=>x.en&&x.km);if(items.length<3)continue;n++;
+    const c=document.createElement('div');c.className='lvcard';
+    const t=document.createElement('div');t.className='lvt';
+    const nm=document.createElement('b');nm.textContent=l.name;const sub=document.createElement('span');sub.className='hint';sub.textContent=items.length+' words';
+    t.append(nm,document.createElement('br'),sub);
+    const b=lvBtn('Host this','pri');b.onclick=()=>mpCreate(l,items);
+    c.append(t,b);box.appendChild(c);
+  }
+  $('mpNoLv').classList.toggle('hidden',n>0);
+  document.querySelectorAll('#mpDiff button').forEach(b=>b.classList.toggle('sel',b.dataset.d===MP.diff));
+}
+async function mpCreate(l,items){
+  if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}
+  mpMsg('Creating your room…');
+  const me=FB.uid();let code='';
+  try{
+    for(let i=0;i<8&&!code;i++){
+      const c=mpCode(),ex=await FB.roomGet(c);
+      if(ex&&ex.meta&&Date.now()-(ex.meta.created||0)<216e5)continue;
+      code=c;
+    }
+    if(!code){mpMsg('Could not find a free code. Try again.');return}
+    const meta={host:me,created:Date.now(),state:'lobby',round:0,text:items.map(x=>x.en+' = '+x.km).join('\n'),lname:l.name,n:items.length,diff:MP.diff,seed:0};
+    await FB.roomSet(code,'meta',meta);
+    await FB.roomSet(code,'players/'+me,myInfo());
+  }catch(e){mpMsg('Could not create the room ('+(e&&e.code||'error')+'). If this keeps happening, the database rules may still need updating.');return}
+  mpEnter(code,true,0);
+}
+async function mpJoin(){
+  if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}
+  const code=($('mpCode').value||'').trim().toUpperCase();
+  if(code.length!==4){mpMsg('Type the 4-letter code from your host.');return}
+  mpMsg('Joining…');
+  try{
+    const ex=await FB.roomGet(code),me=FB.uid();
+    if(!ex||!ex.meta||Date.now()-(ex.meta.created||0)>216e5){mpMsg('No room with that code.');return}
+    const pl=ex.players||{};
+    if(ex.meta.state!=='lobby'&&!pl[me]){mpMsg('That race has already started.');return}
+    if(Object.keys(pl).length>=4&&!pl[me]){mpMsg('That room is full (4 players).');return}
+    await FB.roomSet(code,'players/'+me,myInfo());
+    mpEnter(code,ex.meta.host===me,ex.meta.round|0);
+  }catch(e){mpMsg('Could not join ('+(e&&e.code||'error')+').')}
+}
+function mpEnter(code,host,round){
+  MP.code=code;MP.host=host;MP.round=round;MP.left=false;MP.room=null;MP.seen={};
+  try{FB.roomHook(code,FB.uid())}catch(e){}
+  if(MP.unsub)MP.unsub();
+  MP.unsub=FB.roomWatch(code,mpOnRoom);
+  mpMsg('');mpView('mpLobby');
+}
+function mpOnRoom(room){
+  if(!MP.code||MP.left)return;
+  if(!room||!room.meta){mpClosed();return}
+  MP.room=room;const m=room.meta,now=performance.now(),pl=room.players||{};
+  const out={};
+  for(const u in pl){const p=pl[u];if(!p)continue;const s=MP.seen[u];if(!s||s.d!==p.d||s.x!==p.x)MP.seen[u]={d:p.d,x:p.x,t:now};out[u]=Object.assign({},p,{rt:MP.seen[u].t})}
+  RACE.players=out;
+  if(m.state==='race'&&(m.round|0)!==MP.round){MP.round=m.round|0;mpStartRace(m);return}
+  if(m.state==='lobby'){if(RACE.on){mpBackToLobby();return}mpLobbyRender()}
+  if(RACE.on){const w=room.winner;RACE.win=w&&w.r===RACE.round?w:null;if(RACE.fin)raceStandings()}
+}
+function mpClosed(){
+  const inRace=RACE.on;mpCleanup();
+  if(inRace){$('menuBtn').onclick()}
+  $('mp').classList.remove('hidden');mpView('mpHome');mpMsg('The host closed the room.');
+}
+function mpCleanup(){
+  MP.left=true;if(MP.unsub){try{MP.unsub()}catch(e){}MP.unsub=null}
+  if(RACE.on){RACE.on=false;if(RACE.prevLv!==undefined)curLv=RACE.prevLv}
+  RACE.players={};MP.code='';MP.room=null;
+}
+async function mpLeave(){
+  const code=MP.code,host=MP.host;
+  mpCleanup();
+  try{if(code&&window.FB){const me=FB.uid();if(host){await FB.roomRemove(code,'winner');await FB.roomRemove(code,'meta')}await FB.roomRemove(code,'players/'+me)}}catch(e){}
+}
+function mpLobbyRender(){
+  const room=MP.room;if(!room)return;const m=room.meta,pl=room.players||{},ids=Object.keys(pl);
+  $('mpCodeBig').textContent=MP.code;
+  $('mpInfo').textContent=m.lname+' · '+m.n+' words · '+({easy:'Easy',medium:'Medium',hard:'Hard'}[m.diff]||'Medium');
+  const box=$('mpPlayers');box.textContent='';
+  for(const u of ids){
+    const p=pl[u],c=document.createElement('div');c.className='lvcard';
+    const cv=document.createElement('canvas');cv.width=cv.height=40;cv.style.flex='none';
+    const g=cv.getContext('2d');g.translate(20,20);try{drawBlock(g,28,SHAPES.indexOf(p.s)>=0?p.s:'square',colorOf(p.c),0,false)}catch(e){}
+    const t=document.createElement('div');t.className='lvt';const nm=document.createElement('b');nm.textContent=String(p.name||'Player').slice(0,16)+(u===FB.uid()?' (you)':'')+(u===m.host?' · host':'');
+    t.appendChild(nm);c.append(cv,t);box.appendChild(c);
+  }
+  $('mpStart').classList.toggle('hidden',!MP.host);
+  $('mpStart').textContent=ids.length>1?'▶ Start race ('+ids.length+' players)':'▶ Start (just you)';
+  $('mpWait').classList.toggle('hidden',MP.host);
+}
+async function mpStart(){
+  if(!MP.host||!MP.room)return;
+  $('mpStart').disabled=true;
+  try{await FB.roomRemove(MP.code,'winner');await FB.roomUpdate(MP.code,'meta',{state:'race',round:(MP.room.meta.round|0)+1,seed:(Math.random()*1e9)|0})}catch(e){mpMsg('Could not start ('+(e&&e.code||'error')+').')}
+  $('mpStart').disabled=false;
+}
+async function mpStartRace(m){
+  const R=RACE;R.on=true;R.code=MP.code;R.round=m.round|0;R.seed=m.seed|0;R.diff=m.diff||'medium';R.fin=false;R.win=null;R.sig='';R.lt=0;
+  R.items=parseText(m.text).filter(x=>x.en&&x.km);R.prevLv=curLv;curLv=null;
+  $('mp').classList.add('hidden');$('menu').classList.add('hidden');goFull();
+  try{await loadIpa()}catch(e){}
+  if(!R.on||R.round!==(m.round|0))return;
+  $('game').classList.remove('hidden');play(true);
+  att=0;begin();mode='hold';draw();
+  let n=3;
+  const tick=()=>{
+    if(!RACE.on||RACE.round!==(m.round|0))return;
+    if(n>0){$('msg').textContent=String(n);n--;setTimeout(tick,900)}
+    else{$('msg').textContent='GO!';setTimeout(()=>{if($('msg').textContent==='GO!')$('msg').textContent=''},600);RACE.t0=Date.now();mode='play';last=performance.now();const g2=++loopGen;requestAnimationFrame(t=>loop(t,g2))}
+  };
+  tick();
+}
+function raceTick(force){
+  if(!RACE.on||!window.FB)return;const n=performance.now();
+  if(!force&&n-(RACE.lt||0)<110)return;RACE.lt=n;
+  try{FB.roomUpdate(RACE.code,'players/'+FB.uid(),{d:Math.round(d),y:Math.round(y),q:qi,x:mode==='dead'?1:0,a:att}).catch(()=>{})}catch(e){}
+}
+function raceWin(){
+  mode='dead';fail='';learnWords(run);
+  $('q').textContent='🏁 Finished!';$('opts').innerHTML='';
+  RACE.fin=true;RACE.sig='';
+  const me=FB.uid(),ms=Date.now()-RACE.t0;
+  try{
+    FB.roomUpdate(RACE.code,'players/'+me,{fin:{r:RACE.round,ms},d:Math.round(d),x:1}).catch(()=>{});
+    const cw=MP.room&&MP.room.winner;if(!cw||cw.r!==RACE.round)FB.roomSet(RACE.code,'winner',{r:RACE.round,uid:me,name:myName()}).catch(()=>{});
+  }catch(e){}
+  draw();raceStandings();
+}
+function fmtMs(ms){const s=ms/1000;return Math.floor(s/60)+':'+(s%60).toFixed(1).padStart(4,'0')}
+function raceStandings(){
+  const room=MP.room;if(!room||!RACE.on)return;
+  const pl=room.players||{},w=room.winner&&room.winner.r===RACE.round?room.winner:null,me=FB.uid();
+  const fin=Object.keys(pl).filter(u=>pl[u]&&pl[u].fin&&pl[u].fin.r===RACE.round).sort((a,b)=>(a===(w&&w.uid)?-1:b===(w&&w.uid)?1:pl[a].fin.ms-pl[b].fin.ms));
+  const rest=Object.keys(pl).filter(u=>fin.indexOf(u)<0);
+  const sig=JSON.stringify([fin,rest,w&&w.uid,room.meta.state]);if(sig===RACE.sig)return;RACE.sig=sig;
+  const m=$('msg');m.textContent='';
+  const h=document.createElement('div');h.style.fontSize='18px';h.textContent=w?(w.uid===me?'🏆 You won!':'🏁 '+String(w.name||'Someone').slice(0,16)+' won'):'🏁 Finished';m.appendChild(h);
+  fin.forEach((u,i)=>{const r=document.createElement('div');r.style.fontWeight='600';r.textContent=(i+1)+'. '+String(pl[u].name||'Player').slice(0,16)+(u===me?' (you)':'')+' — '+fmtMs(pl[u].fin.ms);m.appendChild(r)});
+  rest.forEach(u=>{const r=document.createElement('div');r.style.opacity='.6';r.textContent='… '+String(pl[u].name||'Player').slice(0,16)+' still racing';m.appendChild(r)});
+  const row=document.createElement('div');row.style.cssText='margin-top:8px;display:flex;gap:8px;justify-content:center';
+  if(MP.host){const b=document.createElement('button');b.className='pri';b.style.padding='8px 14px';b.textContent='Back to lobby';b.onclick=()=>{FB.roomUpdate(MP.code,'meta',{state:'lobby'}).catch(()=>{})};row.appendChild(b)}
+  else{const s=document.createElement('div');s.className='hint';s.style.alignSelf='center';s.textContent='Waiting for the host…';row.appendChild(s)}
+  const lb=document.createElement('button');lb.style.padding='8px 14px';lb.textContent='Leave';lb.onclick=()=>$('menuBtn').onclick();row.appendChild(lb);
+  m.appendChild(row);
+}
+function mpBackToLobby(){
+  RACE.on=false;if(RACE.prevLv!==undefined)curLv=RACE.prevLv;
+  mode='menu';loopGen++;$('msg').textContent='';$('pausePanel').classList.add('hidden');play(false);leaveFull();$('game').classList.add('hidden');
+  try{FB.roomUpdate(MP.code,'players/'+FB.uid(),{fin:null,d:0,y:0,q:0,x:0,a:1}).catch(()=>{})}catch(e){}
+  $('mp').classList.remove('hidden');mpView('mpLobby');mpLobbyRender();
+}
+function raceX(p){return(p.d||0)+(p.x?0:v*Math.min(.25,(performance.now()-(p.rt||0))/1000))}
+function raceGhosts(sx,tm){
+  const me=FB.uid();
+  for(const u in RACE.players){
+    if(u===me)continue;const p=RACE.players[u];if(!p)continue;
+    const px=sx(raceX(p));if(px<-50||px>W+50)continue;
+    ctx.save();ctx.globalAlpha=.65;ctx.translate(px,GY-(p.y||0)-B/2);
+    try{drawBlock(ctx,B,SHAPES.indexOf(p.s)>=0?p.s:'square',colorOf(p.c),tm,p.x===1)}catch(e){}
+    ctx.restore();
+    ctx.save();ctx.font='bold 12px system-ui,sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.9)';ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=4;ctx.fillText(String(p.name||'').slice(0,10),px,GY-(p.y||0)-B-8);ctx.restore();
+  }
+}
+function raceHud(){
+  const me=FB.uid(),tot=obs[obs.length-1].x1+B+240;
+  for(const u in RACE.players){
+    const p=RACE.players[u];if(!p||u===me)continue;
+    const fr=p.fin&&p.fin.r===RACE.round?1:Math.max(0,Math.min(1,(p.d||0)/tot));
+    const cl=hexRgb(colorOf(p.c).c);
+    ctx.beginPath();ctx.arc(Math.max(7,Math.min(W-7,W*fr)),9,6,0,7);ctx.fillStyle='rgb('+cl.join(',')+')';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();
+  }
+  if(RACE.win&&RACE.win.uid!==me&&!RACE.fin){ctx.save();ctx.font='bold 18px system-ui,sans-serif';ctx.textAlign='center';ctx.fillStyle='#ffd24a';ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=6;ctx.fillText('🏁 '+String(RACE.win.name||'Someone').slice(0,14)+' finished first! Keep going!',W/2,50);ctx.restore()}
+}
+$('mpbtn').onclick=mpOpen;
+$('mpBack').onclick=()=>{if(MP.code)mpLeave();$('mp').classList.add('hidden');$('menu').classList.remove('hidden')};
+$('mpHost').onclick=()=>{if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}mpMsg('');MP.diff=diff;mpPickRender();mpView('mpPick')};
+$('mpPickBack').onclick=()=>{mpMsg('');mpView('mpHome')};
+$('mpJoin').onclick=mpJoin;
+$('mpCode').addEventListener('keydown',e=>{if(e.key==='Enter')mpJoin()});
+$('mpStart').onclick=mpStart;
+$('mpLeave').onclick=async()=>{await mpLeave();mpMsg('');mpView('mpHome')};
+document.querySelectorAll('#mpDiff button').forEach(b=>b.onclick=()=>{MP.diff=b.dataset.d;document.querySelectorAll('#mpDiff button').forEach(x=>x.classList.toggle('sel',x===b))});
 // title screen animation
 const tc=$('tcv'),tx=tc.getContext('2d');let titleOn=false,tt=0,tlast=0;
 function sizeT(){tc.width=innerWidth;tc.height=innerHeight}addEventListener('resize',sizeT);sizeT();
@@ -825,13 +1490,20 @@ setTimeout(()=>{
 <script type="module">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import {getDatabase,ref,get,set} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+import {getDatabase,ref,get,set,update,remove,onValue,onDisconnect} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
 const app=initializeApp({apiKey:"AIzaSyB-3gm1nX0fK763kDkdt7Zto8UU7EfIUPA",authDomain:"khmer-jump.firebaseapp.com",databaseURL:"https://khmer-jump-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"khmer-jump",appId:"1:251686983357:web:f03501567d7e32f3a689d4"});
 const auth=getAuth(app),db=getDatabase(app);
 window.FB={
   onUser:cb=>onAuthStateChanged(auth,cb),
   async signIn(){const pr=new GoogleAuthProvider();try{await signInWithPopup(auth,pr)}catch(e){if(e&&(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'))await signInWithRedirect(auth,pr);else throw e}},
   signOut:()=>signOut(auth),
+  uid:()=>auth.currentUser?auth.currentUser.uid:null,
+  roomGet:async c=>(await get(ref(db,'rooms/'+c))).val(),
+  roomSet:(c,p,v)=>set(ref(db,'rooms/'+c+(p?'/'+p:'')),v),
+  roomUpdate:(c,p,v)=>update(ref(db,'rooms/'+c+(p?'/'+p:'')),v),
+  roomRemove:(c,p)=>remove(ref(db,'rooms/'+c+(p?'/'+p:''))),
+  roomWatch:(c,cb)=>onValue(ref(db,'rooms/'+c),sn=>cb(sn.val()),()=>cb(null)),
+  roomHook:(c,u)=>onDisconnect(ref(db,'rooms/'+c+'/players/'+u)).remove(),
   doc:uid=>{const r=ref(db,'users/'+uid+'/game');return{
     async get(){const sn=await get(r),v=sn.val();return{exists:!!(v&&v.json),data:()=>{try{return JSON.parse(v.json)}catch(e){return{}}}}},
     async set(o){await set(r,{json:JSON.stringify(o),t:Date.now()})}}}
