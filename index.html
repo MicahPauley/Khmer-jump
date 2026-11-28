@@ -110,9 +110,8 @@ body.noipa .ip{display:none}
     </div>
     <button class="pri" id="start">▶ PLAY</button>
     <p id="curlv"></p>
-    <div class="row2"><button id="edit">✎ My words</button><button id="lvbtn">★ Levels</button><button id="storebtn">🛒 Store</button></div>
+    <div class="row2"><button id="edit">✎ My words</button><button id="lvbtn">★ Levels</button><button id="storebtn">🏅 Accolades</button></div>
     <button id="mpbtn" class="hidden">👥 Multiplayer</button>
-    <button id="fillT" class="hidden">✨ Fill in</button>
     <p id="sync">…</p>
     <p id="audst"></p>
   </div>
@@ -120,20 +119,20 @@ body.noipa .ip{display:none}
 
 <div id="editor" class="sheet hidden">
   <h2>My words</h2>
-  <p class="hint">One per line: <code>English = Khmer</code>. Type only the Khmer and Claude adds the English, or only the English and Claude adds the Khmer. The words are mixed up on the spikes every attempt.</p>
+  <p class="hint">One per line: <code>English = Khmer</code>. Put both on every line. The words are mixed up on the spikes every attempt, but the level itself stays the same.</p>
   <textarea id="words" spellcheck="false"></textarea>
   <p class="hint" id="count"></p>
   <div class="row"><input id="lvname" placeholder="Level name (optional)" maxlength="40" autocomplete="off"><button class="pri" id="savelv">💾 Save as level</button></div>
   <p class="hint" id="lvmsg"></p>
-  <div class="row"><button id="fill">✨ Fill in with Claude</button><button class="pri" id="done" style="margin-left:auto">Done</button></div>
+  <div class="row"><button class="pri" id="done" style="margin-left:auto">Done</button></div>
   <p class="hint" id="fillmsg"></p>
   <p class="hint" id="voice"></p>
   <p class="hint">Recorded audio: kheng.info clips and Bible words cut from the Khmer Audio Bible (℗ 2024 Davar Partners International; Khmer Standard Version © 2005 United Bible Societies, Bible Society in Cambodia; free to share, not for sale). Pronunciations: Google Khmer Lexicon (seanghay) in G2K notation. All via PeakSlab.</p>
 </div>
 
 <div id="store" class="sheet hidden">
-  <h2>🛒 Store · <span id="stpts"></span></h2>
-  <div class="row" id="sttabs" style="justify-content:center"><button class="stab sel" data-p="1">Words</button><button class="stab" data-p="2">🏆 Multiplayer wins</button></div>
+  <h2>🏅 Accolades · <span id="stpts"></span></h2>
+  <div class="row" id="sttabs" style="justify-content:center"><button class="stab sel" data-p="1">Words</button><button class="stab" data-p="2">🏆 Multiplayer wins</button><button class="stab" data-p="3">🔁 Reviews</button></div>
   <div id="stp1">
   <div id="stprev" style="display:flex;justify-content:center"></div>
   <p class="hint">Finish a level 100% and every new word in it counts as learned. Replaying a level never adds to your count. A new color unlocks at 200, 400, 600 and 800 words, then Shiny Diamond at 1,000, and you earn a hat halfway to each color (100, 300, 500, 700 and 900). At 1,000 you can prestige for a new shape, and the colors start over.</p>
@@ -146,6 +145,7 @@ body.noipa .ip{display:none}
   <p class="hint" id="bkmsg"></p>
   </div>
   <div id="stp2" class="hidden"><div id="stmp"></div></div>
+  <div id="stp3" class="hidden"><div id="strv"></div></div>
   <div class="row"><button id="stdone" class="pri" style="margin-left:auto">Close</button></div>
 </div>
 
@@ -226,40 +226,16 @@ function parseText(t){
 function parse(){return parseText($('words').value)}
 function updCount(){const a=parse(),n=a.length,m=a.filter(x=>!x.en).length,mk2=a.filter(x=>!x.km).length;$('count').textContent=n+' words = '+n+' jumps'+(n<3?' (need at least 3)':'')+(m?' · '+m+' need English':'')+(mk2?' · '+mk2+' need Khmer':'')+' · '+a.filter(x=>x.km&&hasAud(x.km)).length+' with recorded audio';$('edit').textContent='✎ My words ('+n+')';{const ft=$('fillT');if(ft){ft.classList.toggle('hidden',!(m||mk2));ft.textContent='✨ Fill in '+(m&&mk2?'English + Khmer':m?'English':'Khmer')}}try{localStorage.setItem('khmerWords',$('words').value)}catch(e){}}
 async function fillEnglish(){
-  const st=$('fillmsg');
-  let items=parse();
-  const needEn=items.filter(x=>!x.en&&x.km),needKm=items.filter(x=>x.en&&!x.km);
-  if(!needEn.length&&!needKm.length){st.textContent='';return true}
-  let sample=null;
-  try{sample=window.claude&&await claude.use('sample')}catch(e){}
-  if(!sample){st.textContent='Filling in with Claude only works when the page is opened through Claude. You can type both yourself, like: water = ទឹក';return false}
-  const ask=async(prompt,n)=>{const r=await sample(prompt);const arr=JSON.parse(r.text.match(/\[[\s\S]*\]/)[0]);if(arr.length!==n)throw new Error('len');return arr.map(x=>String(x).trim())};
-  let ok=true,msgs=[];
-  try{
-    if(needEn.length){
-      st.textContent='Asking Claude for English meanings…';
-      const arr=await ask('Give a short, common English meaning (1 to 3 words) for each Khmer word or phrase below, in the same order. Reply with only a JSON array of '+needEn.length+' strings.\n'+JSON.stringify(needEn.map(x=>x.km)),needEn.length);
-      needEn.forEach((x,i)=>x.en=arr[i]);msgs.push('English added');
-    }
-    if(needKm.length){
-      st.textContent='Asking Claude for Khmer words…';
-      const arr=await ask('Give the most common everyday Khmer word or short phrase, written in Khmer script only (no romanization, no English), for each English word below, in the same order. Reply with only a JSON array of '+needKm.length+' strings.\n'+JSON.stringify(needKm.map(x=>x.en)),needKm.length);
-      let bad=0;needKm.forEach((x,i)=>{if(KH.test(arr[i])&&!/[A-Za-z]/.test(arr[i]))x.km=arr[i];else bad++});
-      msgs.push('Khmer added'+(bad?' ('+bad+' could not be filled)':''));
-    }
-    $('words').value=items.map(x=>x.km?(x.en?x.en+' = '+x.km:x.km):x.en).join('\n');
-    updCount();st.textContent=msgs.join(' · ')+'. Skim it and fix anything that looks wrong — Khmer from Claude is worth a check with a native speaker.';
-    return !parse().some(x=>!x.en||!x.km);
-  }catch(e){st.textContent='Could not fill in the words. Try again, or type them in.';return false}
+  const st=$('fillmsg'),bad=parse().filter(x=>!x.en||!x.km).length;
+  if(!bad){st.textContent='';return true}
+  st.textContent=bad+' line'+(bad>1?'s are':' is')+' missing the English or the Khmer. Put both on each line, like: water = ទឹក';return false;
 }
-$('fill').onclick=fillEnglish;
-{const ft=$('fillT');ft.onclick=async()=>{ft.disabled=true;ft.textContent='Filling in…';const r=await fillEnglish();ft.disabled=false;if(r){ft.textContent='✓ Filled in';setTimeout(updCount,1200)}else{$('editor').classList.remove('hidden');updCount()}}}
 $('words').addEventListener('input',updCount);updCount();
 document.querySelectorAll('#diff button').forEach(b=>b.onclick=()=>{diff=b.dataset.d;document.querySelectorAll('#diff button').forEach(x=>x.classList.toggle('sel',x===b))});
 
 /* ===== game ===== */
 const cv=$('cv'),ctx=cv.getContext('2d');
-const W=960,H=270,GY=236,B=36,BX=150,L=330,PK=110;
+const W=960,H=270,GY=190,B=36,BX=150,L=330,PK=110;
 const SPEED={easy:260,medium:360,hard:500};
 let run=[],obs=[],d=0,v=0,y=0,qi=0,mode='menu',last=0,opts=[],att=0,fail=null,flash=0,shake=0,parts=[],tPlay=0,loopGen=0,pAcc=0;
 var RACE={on:false,players:{},fin:false,win:null,round:0};
@@ -451,7 +427,7 @@ $('words').addEventListener('input',()=>{if(curLv){curLv=null;lvLabel()}});
 $('savelv').onclick=async()=>{
   const m=$('lvmsg');
   if(parse().length<3){m.textContent='Add at least 3 words first.';return}
-  $('savelv').disabled=true;await fillEnglish();$('savelv').disabled=false;
+  $('savelv').disabled=true;const okf=await fillEnglish();$('savelv').disabled=false;if(!okf){m.textContent='Every line needs both the English and the Khmer before you can save it.';return}
   const text=$('words').value.trim(),n=parse().length,name=$('lvname').value.trim()||('Level '+(LV.length+1));
   let l=LV.find(x=>x.name.toLowerCase()===name.toLowerCase());
   if(l){if(l.text!==text)l.prog=0;l.text=text;l.n=n;l.saved=Date.now();m.textContent='Updated “'+l.name+'” ('+n+' words).'}
@@ -922,7 +898,7 @@ function msgBtn(text,label,fn){
   const b=document.createElement('button');b.className='pri';b.style.padding='8px 14px';b.textContent=label;b.onclick=fn;m.appendChild(b);
 }
 function begin(){
-  run=RACE.on?seededShuffle(RACE.items,RACE.seed):shuffle(parse().filter(x=>x.en&&x.km));v=SPEED[RACE.on?RACE.diff:diff];LAY.seed=layoutSeed();TH=THEMES[hashStr('th'+LAY.seed)%THEMES.length];obs=plan(run.length);cam=camT=0;
+  run=RACE.on?seededShuffle(RACE.items,RACE.seed):shuffle(parse().filter(x=>x.en&&x.km));v=SPEED[RACE.on?RACE.diff:diff];LAY.seed=layoutSeed();TH=THEMES[hashStr('th'+LAY.seed)%THEMES.length];obs=plan(run.length);cam=camT=0;petD=-60;petY=0;
   d=0;y=0;air=false;fell=false;rot=0;jumpReq=0;coy=0;parts=[];flash=0;shake=0;att++;tPlay=0;fail=null;pAcc=0;mode='play';
   $('msg').textContent='';$('pausePanel').classList.add('hidden');
   setQ(0);last=performance.now();const g=++loopGen;requestAnimationFrame(t=>loop(t,g));
@@ -959,8 +935,8 @@ function win(){
   if(RACE.on){raceWin();return}
   mode='dead';fail='';
   const lvl=LV.find(x=>x.id===curLv);if(lvl){lvl.done=(lvl.done||0)+1;lvl.best=lvl.best?Math.min(lvl.best,att):att;lvl.prog=100;lvWrite()}$('q').textContent='🎉 Level complete!';$('opts').innerHTML='';
-  const earn=learnWords(run);
-  msgBtn('All '+run.length+' words in '+att+' attempt'+(att>1?'s':'')+'! '+(earn?'+'+earn+' new word'+(earn>1?'s':'')+' learned ⭐':'No new words this time — replays don’t add to your count.'),'Play again',()=>{att=0;begin()});draw();
+  const rev=reviewWords(run),earn=learnWords(run);
+  msgBtn('All '+run.length+' words in '+att+' attempt'+(att>1?'s':'')+'! '+(earn?'+'+earn+' new word'+(earn>1?'s':'')+' learned ⭐':'No new words this time.')+(rev?' '+rev+' word'+(rev>1?'s':'')+' reviewed 🔁':''),'Play again',()=>{att=0;begin()});draw();
 }
 function floorAt(x,os){let f=-Infinity;for(const o of os)for(const p of o.sg)if(x>=p.a-10&&x<=p.b+10&&p.h>f)f=p.h;return f}
 function hzAt(x,os){for(const o of os)for(const g of o.gp)if(x>g.a&&x<g.b)return g.hz;return -1e9}
@@ -989,7 +965,12 @@ function step(dt){
 function camUpdate(dt){
   let t=camT;
   if(!air)t=y;else if(y>camT+130)t=y-130;else if(y<camT-100)t=y+100;
-  camT=t;cam+=(camT-cam)*Math.min(1,dt*6);
+  camT=t;
+  const os=obs.slice(Math.max(0,qi-1),qi+3);let lo=Infinity;
+  for(let x=d+100;x<=d+560;x+=40){const f=floorAt(x,os);if(f>-Infinity&&f<lo)lo=f}
+  const drop=isFinite(lo)?Math.max(0,Math.min(200,camT-lo)):0;
+  cam+=((camT-.7*drop)-cam)*Math.min(1,dt*6);
+  petD+=((d-46)-petD)*Math.min(1,dt*9);petY+=((y+(air?4:0))-petY)*Math.min(1,dt*7);
 }
 function loop(now,gen){
   if(gen!==loopGen||mode!=='play')return;
@@ -1160,6 +1141,7 @@ function draw(){
   ctx.save();ctx.translate(BX,GY-(y-cam)-B/2);ctx.rotate(rot);
   drawBlock(ctx,B,S.eqS,colorOf(S.eqC),tm,mode==='dead'&&!!fail,gearNow());
   ctx.restore();
+  if(S.eqP){drawPet(ctx,S.eqP,sx(petD),sy(petY)-B/2+4+Math.sin(tm*5)*2,tm,26)}
   if(run.length&&obs.length){
     const done=Math.max(0,Math.min(1,d/(obs[obs.length-1].x1+B+240)));
     ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(0,0,W,5);ctx.fillStyle='#f28c1b';ctx.fillRect(0,0,W*done,5);
@@ -1180,20 +1162,20 @@ function hslHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),
 var PAL=[['Ruby','#e11d48'],['Emerald','#10b981'],['Cobalt','#1d4ed8'],['Violet','#8b5cf6']];
 var COLS=PAL.map(([n,c],i)=>({id:'c'+(i+1),name:n,c,thr:200*(i+1)}));
 COLS.push({id:'c'+NCOL,name:'Shiny Diamond',c:'#9be7ff',hi:'#ffffff',lo:'#4aa8d8',shine:1,thr:200*NCOL});
-var S={learned:{},base:0,prestige:0,eqC:'orange',eqS:'square',eqH:'',eqG:{},mpWins:0};
-try{const r=JSON.parse(localStorage.getItem('khmerStore')||'null');if(r&&typeof r==='object'){S.learned=Object.assign({},r.learned||{});S.base=r.base|0;S.prestige=Math.min(MAXP,r.prestige|0);S.eqC=r.eqC||'orange';S.eqS=r.eqS||'square';S.eqH=r.eqH||'';S.eqG=(r.eqG&&typeof r.eqG==='object')?r.eqG:{};S.mpWins=r.mpWins|0}}catch(e){}
+var S={learned:{},base:0,prestige:0,eqC:'orange',eqS:'square',eqH:'',eqG:{},mpWins:0,reviewed:0,eqP:''};
+try{const r=JSON.parse(localStorage.getItem('khmerStore')||'null');if(r&&typeof r==='object'){S.learned=Object.assign({},r.learned||{});S.base=r.base|0;S.prestige=Math.min(MAXP,r.prestige|0);S.eqC=r.eqC||'orange';S.eqS=r.eqS||'square';S.eqH=r.eqH||'';S.eqG=(r.eqG&&typeof r.eqG==='object')?r.eqG:{};S.mpWins=r.mpWins|0;S.reviewed=r.reviewed|0;S.eqP=r.eqP||''}}catch(e){}
 function learnedN(){return Object.keys(S.learned).length}
 function prog(){return Math.max(0,learnedN()-(S.base||0))}
 function reached(c){return prog()>=c.thr}
 function unlocked(c){return S.prestige>0||reached(c)}
 function colorOf(id){if(id==='orange')return BASECOL;for(const c of COLS)if(c.id===id)return c;return BASECOL}
 function ownedShapes(){return SHAPES.slice(0,Math.min(S.prestige,SHAPES.length-1)+1)}
-function eqOk(){const c=colorOf(S.eqC);if(c!==BASECOL&&!unlocked(c))S.eqC='orange';if(c===BASECOL&&S.eqC!=='orange')S.eqC='orange';if(ownedShapes().indexOf(S.eqS)<0)S.eqS='square';const hh=hatById(S.eqH);if(S.eqH&&(!hh||!hatUnlocked(hh)))S.eqH='';if(!S.eqG||typeof S.eqG!=='object')S.eqG={};for(const sl of Object.keys(S.eqG)){const o=outById(S.eqG[sl]);if(!o||o.slot!==sl||(S.mpWins|0)<o.thr)delete S.eqG[sl]}}
+function eqOk(){const c=colorOf(S.eqC);if(c!==BASECOL&&!unlocked(c))S.eqC='orange';if(c===BASECOL&&S.eqC!=='orange')S.eqC='orange';if(ownedShapes().indexOf(S.eqS)<0)S.eqS='square';const hh=hatById(S.eqH);if(S.eqH&&(!hh||!hatUnlocked(hh)))S.eqH='';if(!S.eqG||typeof S.eqG!=='object')S.eqG={};{const pp=petById(S.eqP);if(S.eqP&&(!pp||!petUnlocked(pp)))S.eqP=''}for(const sl of Object.keys(S.eqG)){const o=outById(S.eqG[sl]);if(!o||o.slot!==sl||(S.mpWins|0)<o.thr)delete S.eqG[sl]}}
 function saveStore(){eqOk();try{localStorage.setItem('khmerStore',JSON.stringify(S))}catch(e){}stLabel();try{cloudPush()}catch(e){}}
 function learnWords(list){let n=0;for(const x of list){const k=(x.km||'').trim();if(k&&!S.learned[k]){S.learned[k]=1;n++}}if(n)saveStore();return n}
 // levels you already finished before the store existed count too
 function creditLevels(){let n=0,ch=false;for(const l of LV){if(l&&!l.credited&&((l.done||0)>0||(l.prog||0)>=100)){try{n+=learnWords(parseText(l.text||''))}catch(e){}l.credited=1;ch=true}}if(ch)lvWrite();return n}
-function stLabel(){const b=$('storebtn');if(b)b.textContent='🛒 Store';const w=$('wc');if(w)w.textContent='📚 '+learnedN()}
+function stLabel(){const b=$('storebtn');if(b)b.textContent='🏅 Accolades';const w=$('wc');if(w)w.textContent='📚 '+learnedN()}
 function blockPath(c,s,shape){
   const h=s/2;c.beginPath();
   if(shape==='circle'){c.arc(0,0,h*1.04,0,7)}
@@ -1212,7 +1194,48 @@ var OUTFITS=[{id:'sneak',name:'Sneakers',slot:'shoes',thr:5},{id:'spiky',name:'S
 function hatById(id){return HATS.find(x=>x.id===id)||null}
 function outById(id){return OUTFITS.find(x=>x.id===id)||null}
 function hatUnlocked(h){return S.prestige>0||prog()>=h.thr}
-function gearNow(){return{h:S.eqH||'',g:S.eqG||{}}}
+// ---- companions (words reviewed) ----
+var PETS=[['banana','🍌','Banana'],['monkey','🐒','Monkey'],['star','⭐','Little star'],['plank','🪵','Plank of wood'],['angel','😇','Angel'],['giraffe','🦒','Giraffe'],['elephant','🐘','Elephant'],['gnome','','Gnome'],['frog','🐸','Frog'],['turtle','🐢','Turtle'],['penguin','🐧','Penguin'],['fox','🦊','Fox'],['panda','🐼','Panda'],['owl','🦉','Owl'],['butterfly','🦋','Butterfly'],['dolphin','🐬','Dolphin'],['octopus','🐙','Octopus'],['flamingo','🦩','Flamingo'],['peacock','🦚','Peacock'],['kangaroo','🦘','Kangaroo'],['wolf','🐺','Wolf'],['lion','🦁','Lion'],['tiger','🐯','Tiger'],['eagle','🦅','Eagle'],['shark','🦈','Shark'],['whale','🐳','Whale'],['fairy','🧚','Fairy'],['unicorn','🦄','Unicorn'],['genie','🧞','Genie'],['robot','🤖','Robot'],['alien','👽','Alien'],['ufo','🛸','Flying saucer'],['rocket','🚀','Rocket'],['comet','☄️','Comet'],['planet','🪐','Ringed planet'],['moon','🌙','Moon'],['sun','🌞','Sun'],['rainbow','🌈','Rainbow'],['orb','🔮','Crystal ball'],['wizard','🧙','Wizard'],['trex','🦖','T-Rex'],['sauropod','🦕','Long-neck dino'],['dragon','🐉','Dragon'],['gem','💎','Gem'],['fire','🔥','Fire spirit'],['bolt','⚡','Lightning'],['crown','👑','Crown'],['trophy','🏆','Trophy'],['glow','🌟','Glowing star'],['dragonking','🐲','Dragon king']].map((q,i)=>({id:q[0],e:q[1],name:q[2],thr:1000*(i+1)}));
+function petById(id){return PETS.find(x=>x.id===id)||null}
+function petUnlocked(p){return(S.reviewed|0)>=p.thr}
+function reviewWords(list){let n=0;for(const x of list){if(S.learned[(x.km||'').trim()])n++}if(n){S.reviewed=(S.reviewed|0)+n;saveStore()}return n}
+var petD=-60,petY=0;
+function drawPet(c,id,x,y,t,size){
+  const p=petById(id);if(!p)return;
+  c.save();
+  if(id==='gnome'){
+    c.translate(x,y);const k=size/30;c.scale(k,k);c.lineJoin='round';c.lineWidth=1.6;c.strokeStyle='#1d1d1f';
+    c.fillStyle='#3b6fd4';c.beginPath();c.rect(-8,2,16,13);c.fill();c.stroke();
+    c.fillStyle='#ffd7b0';c.beginPath();c.arc(0,-2,7,0,7);c.fill();c.stroke();
+    c.fillStyle='#f4f4f4';c.beginPath();c.moveTo(-7,-1);c.quadraticCurveTo(0,17,7,-1);c.quadraticCurveTo(0,4,-7,-1);c.fill();c.stroke();
+    c.fillStyle='#e63946';c.beginPath();c.moveTo(-9,-5);c.lineTo(0,-24);c.lineTo(9,-5);c.closePath();c.fill();c.stroke();
+    c.fillStyle='#ff9a8d';c.beginPath();c.arc(0,0,2,0,7);c.fill();
+  }else{
+    c.font=Math.round(size)+'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(p.e,x,y);
+  }
+  c.restore();
+}
+function stRenderRV(){
+  const box=$('strv');if(!box)return;box.textContent='';
+  const w=S.reviewed|0,nxt=PETS.find(p=>p.thr>w),prv=PETS.slice().reverse().find(p=>p.thr<=w);
+  const h=stEl('p','','🔁 '+w.toLocaleString()+' word'+(w===1?'':'s')+' reviewed');h.style.cssText='text-align:center;font-weight:800;font-size:18px;margin:6px 0';box.appendChild(h);
+  if(nxt){
+    box.appendChild(stEl('p','hint','Next companion: '+(nxt.e||'🧙')+' '+nxt.name+' at '+nxt.thr.toLocaleString()+' words ('+(nxt.thr-w).toLocaleString()+' to go)'));
+    const lo=prv?prv.thr:0,bar=stEl('div','pbar'),fl=document.createElement('i');fl.style.width=Math.max(0,Math.min(100,100*(w-lo)/(nxt.thr-lo)))+'%';bar.appendChild(fl);box.appendChild(bar);
+  }else box.appendChild(stEl('p','hint','You have every companion! 🎉'));
+  box.appendChild(stEl('p','hint','Finish a level you have already learned and every word you already knew counts as reviewed. A new companion joins you every 1,000 words, up to 50,000. Tap one to bring it along, tap again to send it home.'));
+  const g=stEl('div','wgrid');
+  for(const p of PETS){
+    const ok=petUnlocked(p),b=stEl('button','wbtn pet'+(S.eqP===p.id?' sel':'')+(ok?'':' lk'));
+    b.title=p.name+' · '+p.thr.toLocaleString()+' words';b.setAttribute('aria-label',p.name);
+    const cv=document.createElement('canvas');cv.width=cv.height=56;cv.className='stcv';{const c=cv.getContext('2d');drawPet(c,p.id,28,30,0,30)}
+    b.appendChild(cv);
+    b.appendChild(stEl('span','lbl'+(ok?' got':''),(ok?'✓ ':'')+(p.thr/1000)+'k'));
+    b.disabled=!ok;b.onclick=()=>{S.eqP=S.eqP===p.id?'':p.id;saveStore();stRender()};g.appendChild(b);
+  }
+  box.appendChild(g);
+}
+function gearNow(){return{h:S.eqH||'',g:S.eqG||{},p:S.eqP||''}}
 function gearOf(p){return{h:p&&p.h||'',g:p&&p.g&&typeof p.g==='object'?p.g:{}}}
 var TOPY={square:1,circle:1.04,diamond:1.38,hexagon:1.2,pentagon:1.2,octagon:1.08,triangle:1.68,heart:.95,cross:1.28,squircle:1,star:1.45};
 var BOTY={square:1,circle:1.04,diamond:1.38,hexagon:1.2,pentagon:1.12,octagon:1.08,triangle:.95,heart:1.05,cross:1.28,squircle:1,star:1.17};
@@ -1323,7 +1346,7 @@ var stPrev=[],stRaf=0;
 function stCanvas(shape,col,sz,gear){const cv=document.createElement('canvas');cv.width=cv.height=sz||64;cv.className='stcv';stPrev.push({cv,shape,col,gear});return cv}
 function stPaint(){
   const t=performance.now()/1000;
-  for(const p of stPrev){if(!p.cv.isConnected)continue;const c=p.cv.getContext('2d'),w=p.cv.width;c.clearRect(0,0,w,w);c.save();c.translate(w/2,w/2+1);c.scale(w/64*.78,w/64*.78);drawBlock(c,36,p.shape,p.col,t,false,p.gear);c.restore()}
+  for(const p of stPrev){if(!p.cv.isConnected)continue;const c=p.cv.getContext('2d'),w=p.cv.width;c.clearRect(0,0,w,w);c.save();c.translate(w/2,w/2+1);c.scale(w/64*.78,w/64*.78);drawBlock(c,36,p.shape,p.col,t,false,p.gear);if(p.gear&&p.gear.p)drawPet(c,p.gear.p,-34,12+Math.sin(t*5)*1.5,t,16);c.restore()}
   if(!$('store').classList.contains('hidden'))stRaf=requestAnimationFrame(stPaint);else stRaf=0;
 }
 function stEl(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e}
@@ -1380,7 +1403,7 @@ function stRender(){
   }
   war.appendChild(g2);
   const pv=$('stprev');pv.textContent='';pv.appendChild(stCanvas(S.eqS,colorOf(S.eqC),110,gearNow()));
-  stRenderMP();
+  stRenderMP();stRenderRV();
   if(!stRaf)stRaf=requestAnimationFrame(stPaint);
 }
 function stRenderMP(){
@@ -1407,20 +1430,20 @@ function stRenderMP(){
 }
 var stPg=1;
 function stPage(n){
-  stPg=n;$('stp1').classList.toggle('hidden',n!==1);$('stp2').classList.toggle('hidden',n!==2);
+  stPg=n;for(let i=1;i<=3;i++)$('stp'+i).classList.toggle('hidden',n!==i);
   document.querySelectorAll('#sttabs button').forEach(b=>b.classList.toggle('sel',+b.dataset.p===n));
 }
 document.querySelectorAll('#sttabs button').forEach(b=>b.onclick=()=>stPage(+b.dataset.p));
 {let sx0=0,sy0=0;const st=$('store');
  st.addEventListener('touchstart',e=>{const t=e.touches[0];sx0=t.clientX;sy0=t.clientY},{passive:true});
- st.addEventListener('touchend',e=>{const t=e.changedTouches[0],dx=t.clientX-sx0,dy=t.clientY-sy0;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5){if(dx<0&&stPg===1)stPage(2);else if(dx>0&&stPg===2)stPage(1)}},{passive:true});
+ st.addEventListener('touchend',e=>{const t=e.changedTouches[0],dx=t.clientX-sx0,dy=t.clientY-sy0;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.5){if(dx<0&&stPg<3)stPage(stPg+1);else if(dx>0&&stPg>1)stPage(stPg-1)}},{passive:true});
 }
 function bkEncode(){return 'KJ1:'+btoa(unescape(encodeURIComponent(JSON.stringify({store:S,levels:LV,words:$('words').value}))))}
 function bkMerge(d){
   if(d.store&&typeof d.store==='object'){
     S.learned=Object.assign({},d.store.learned||{},S.learned);const rp=Math.min(MAXP,d.store.prestige|0);
     if(rp>S.prestige){S.prestige=rp;S.base=d.store.base|0}else if(rp===S.prestige)S.base=Math.max(S.base||0,d.store.base|0);
-    S.mpWins=Math.max(S.mpWins|0,d.store.mpWins|0);if(!S.eqH&&d.store.eqH)S.eqH=d.store.eqH;if(d.store.eqG&&typeof d.store.eqG==='object'&&!Object.keys(S.eqG||{}).length)S.eqG=d.store.eqG;
+    S.mpWins=Math.max(S.mpWins|0,d.store.mpWins|0);S.reviewed=Math.max(S.reviewed|0,d.store.reviewed|0);if(!S.eqP&&d.store.eqP)S.eqP=d.store.eqP;if(!S.eqH&&d.store.eqH)S.eqH=d.store.eqH;if(d.store.eqG&&typeof d.store.eqG==='object'&&!Object.keys(S.eqG||{}).length)S.eqG=d.store.eqG;
   }
   if(Array.isArray(d.levels)){
     const m=new Map();for(const l of LV)if(l&&l.id)m.set(l.id,l);
@@ -1483,7 +1506,7 @@ async function cloudStart(doc){
         const r=d.store;S.learned=Object.assign({},r.learned||{},S.learned||{});
         if((r.prestige|0)>S.prestige){S.prestige=Math.min(MAXP,r.prestige|0);S.base=r.base|0}else if((r.prestige|0)===S.prestige)S.base=Math.max(S.base||0,r.base|0);
         if(S.eqC==='orange'&&S.eqS==='square'){S.eqC=r.eqC||'orange';S.eqS=r.eqS||'square'}
-        S.mpWins=Math.max(S.mpWins|0,r.mpWins|0);if(!S.eqH&&r.eqH)S.eqH=r.eqH;if(r.eqG&&typeof r.eqG==='object'&&!Object.keys(S.eqG||{}).length)S.eqG=r.eqG;
+        S.mpWins=Math.max(S.mpWins|0,r.mpWins|0);S.reviewed=Math.max(S.reviewed|0,r.reviewed|0);if(!S.eqP&&r.eqP)S.eqP=r.eqP;if(!S.eqH&&r.eqH)S.eqH=r.eqH;if(r.eqG&&typeof r.eqG==='object'&&!Object.keys(S.eqG||{}).length)S.eqG=r.eqG;
         creditLevels();eqOk();try{localStorage.setItem('khmerStore',JSON.stringify(S))}catch(e){}stLabel()
       }
       let local=null;try{local=localStorage.getItem('khmerWords')}catch(e){}
@@ -1531,7 +1554,7 @@ var MP={code:'',host:false,room:null,unsub:null,round:0,left:false,pick:'',diff:
 function rnd32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function seededShuffle(a,seed){a=a.slice();const r=rnd32(seed);for(let i=a.length-1;i>0;i--){const j=r()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
 function myName(){return window.MYNAME||'Player'}
-function myInfo(){return{name:myName(),c:S.eqC,s:S.eqS,h:S.eqH||'',g:S.eqG||{},d:0,y:0,q:0,x:0,a:1}}
+function myInfo(){return{name:myName(),c:S.eqC,s:S.eqS,h:S.eqH||'',g:S.eqG||{},p:S.eqP||'',d:0,y:0,q:0,x:0,a:1}}
 function mpMsg(t){$('mpMsg').textContent=t||''}
 function mpView(v){for(const k of['mpHome','mpPick','mpLobby'])$(k).classList.toggle('hidden',k!==v)}
 function mpOpen(){
@@ -1662,7 +1685,7 @@ function raceTick(force){
   try{FB.roomUpdate(RACE.code,'players/'+FB.uid(),{d:Math.round(d),y:Math.round(y),q:qi,x:mode==='dead'?1:0,a:att}).catch(()=>{})}catch(e){}
 }
 function raceWin(){
-  mode='dead';fail='';learnWords(run);
+  mode='dead';fail='';reviewWords(run);learnWords(run);
   $('q').textContent='🏁 Finished!';$('opts').innerHTML='';
   RACE.fin=true;RACE.sig='';
   const me=FB.uid(),ms=Date.now()-RACE.t0;
@@ -1709,6 +1732,7 @@ function raceGhosts(sx,tm){
     ctx.save();ctx.globalAlpha=.65;ctx.translate(px,GY-((p.y||0)-cam)-B/2);
     try{drawBlock(ctx,B,SHAPES.indexOf(p.s)>=0?p.s:'square',colorOf(p.c),tm,p.x===1,gearOf(p))}catch(e){}
     ctx.restore();
+    if(p.p)drawPet(ctx,p.p,px-52,GY-((p.y||0)-cam)-B/2+4+Math.sin(tm*5)*2,tm,24);
     ctx.save();ctx.font='bold 12px system-ui,sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.9)';ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=4;ctx.fillText(String(p.name||'').slice(0,10),px,GY-((p.y||0)-cam)-B-8);ctx.restore();
   }
 }
