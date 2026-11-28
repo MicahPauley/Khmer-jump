@@ -1901,7 +1901,7 @@ function raceHud(){
     ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.75)';ctx.lineWidth=2.5;ctx.font='bold '+(q.me?17:15)+'px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';const lt=raceLet(q.u);ctx.strokeText(lt,0,1);ctx.fillText(lt,0,1);
     ctx.restore();
   }
-  const mine=list.find(q=>q.me),let rank=1+list.filter(q=>!q.me&&q.f>mine.f).length;
+  const mine=list.find(q=>q.me);let rank=1+list.filter(q=>!q.me&&q.f>mine.f).length;
   if(RACE.fin){const mf=RACE.players[me]&&RACE.players[me].fin,w0=RACE.win;rank=(w0&&w0.uid===me)?1:mf?1+list.filter(q=>!q.me&&q.p.fin&&q.p.fin.r===RACE.round&&q.p.fin.ms<mf.ms).length:1+list.filter(q=>!q.me&&q.f>=1).length}
   
   ctx.font='bold 11px system-ui,sans-serif';ctx.textBaseline='alphabetic';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText('You are '+raceLet(me)+' · '+rank+(['st','nd','rd'][rank-1]||'th')+' of '+list.length,W/2,my+mh+19);
