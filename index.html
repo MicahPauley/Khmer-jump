@@ -173,7 +173,7 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
 
 <div id="verses" class="sheet hidden" style="overflow:auto">
   <h2>📖 Verses</h2>
-  <p class="hint">Save a Khmer verse (or several verses) and play it word by word, always in order, until you can say it from memory. Small words like និង and នៃ are joined with the next word into one choice.</p>
+  <p class="hint">Save a Khmer verse (or several verses) and play it word by word, always in order, until you can say it from memory. Each choice is a few words: 3 to 4 short words together, or just one when the word is long.</p>
   <div class="lvlist" id="vlist" style="flex:none;overflow:visible"></div>
   <p class="hint" id="vempty">No verses saved yet. Add one below or pick a suggestion.</p>
   <h3>Add a verse</h3>
@@ -1369,10 +1369,15 @@ function vWords(text){
 function vJoin(text,arr){return arr.join(vIsKm(text)?'':' ')}
 function vChunks(text){
   const w=vWords(text),out=[],km=vIsKm(text);
-  const sm=x=>km?KSMALL.has(x.replace(/[។៕,.;:!?“”‘’"'()​]/g,'')):VSMALL.has(x.toLowerCase().replace(/[^a-z]/g,''));
+  const len=x=>km?(x.match(/[\u1780-\u17B3]/g)||[]).length:x.replace(/[\u200b.,;:!?“”‘’"'()\s]/g,'').length;
+  const big=km?6:8,budget=km?11:22;
   const stop=x=>/[.,;:!?។៕\u200b]$/.test(x);
-  for(let i=0;i<w.length;i++){
-    if(i+1<w.length&&sm(w[i])&&sm(w[i+1])&&!stop(w[i])){out.push(km?w[i]+w[i+1]:w[i]+' '+w[i+1]);i++}else out.push(w[i]);
+  let i=0;
+  while(i<w.length){
+    if(len(w[i])>=big){out.push(w[i]);i++;continue}
+    let g=[w[i]],tot=len(w[i]);i++;
+    while(i<w.length&&g.length<4&&!stop(g[g.length-1])&&len(w[i])<big&&tot+len(w[i])<=budget){g.push(w[i]);tot+=len(w[i]);i++}
+    out.push(km?g.join(''):g.join(' '));
   }
   return out;
 }
@@ -1429,7 +1434,7 @@ function vWin(){
 function vSetQ(i){
   const w=run[i];
   let pool=[...new Set(run.map(x=>x.km))].filter(k=>k.replace(/\u200b/g,'')!==w.km.replace(/\u200b/g,''));
-  if(!pool.length)pool=['the Lord','and','He will','God'].filter(k=>k!==w.km);
+  if(!pool.length)pool=(vIsKm(w.km)?['ព្រះយេហូវ៉ាទ្រង់','ហើយព្រះអង្គនឹង','សូមអរព្រះគុណព្រះអង្គ']:['the Lord','and','He will','God']).filter(k=>k!==w.km);
   pool.sort((a,b)=>Math.abs(a.length-w.km.length)-Math.abs(b.length-w.km.length)+(Math.random()-.5)*6);
   opts=shuffle([w.km,pool[Math.floor(Math.random()*Math.min(4,pool.length))]]);
   $('q').textContent=VS.ref;
