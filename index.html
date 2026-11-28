@@ -64,6 +64,7 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 #curlv:empty{display:none}
 #wc{position:absolute;top:calc(24px + env(safe-area-inset-top));left:calc(12px + env(safe-area-inset-left));z-index:2;color:#fff;opacity:.8;font-size:12px;font-weight:700;letter-spacing:.3px}
 #musbtn{position:absolute;left:calc(12px + env(safe-area-inset-left));bottom:calc(14px + env(safe-area-inset-bottom));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 12px;font-size:14px}
+#fsbtn{position:absolute;right:calc(12px + env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700}
 #audst{color:#fff;opacity:.75;font-size:12px;margin:0}#audst:empty{display:none}
 #login{position:absolute;top:calc(20px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));z-index:3;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:14px;padding:5px 11px;font-size:12px;font-weight:700}
 #mpbtn{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
@@ -101,6 +102,7 @@ body.noipa .ip{display:none}
   <canvas id="tcv"></canvas>
   <div id="wc" title="Words learned"></div>
   <button id="musbtn" aria-label="Toggle music">🎵</button>
+  <button id="fsbtn" class="hidden">⛶ Full screen</button>
   <button id="login" class="hidden">Sign in</button>
   <div class="title">
     <h1 class="logo">KHMER JUMP</h1>
@@ -922,8 +924,20 @@ function recRender(box){
   });
 }
 lvRead();lvLabel();
+(function(){
+  const b=$('fsbtn');if(!b)return;const el=document.documentElement;
+  if(!document.fullscreenEnabled&&!el.webkitRequestFullscreen){return}
+  b.classList.remove('hidden');
+  const upd=()=>{const on=!!(document.fullscreenElement||document.webkitFullscreenElement);b.textContent=on?'⛶ Exit full screen':'⛶ Full screen'};
+  b.onclick=e=>{e.stopPropagation();const on=!!(document.fullscreenElement||document.webkitFullscreenElement);
+    try{if(on){FSPREF=false;(document.exitFullscreen||document.webkitExitFullscreen).call(document)}
+    else{FSPREF=true;const r=(el.requestFullscreen?el.requestFullscreen({navigationUI:'hide'}):el.webkitRequestFullscreen());Promise.resolve(r).then(()=>{try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})}catch(x){}}).catch(()=>{FSPREF=false})}}catch(x){FSPREF=false}};
+  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)FSPREF=false;upd()});
+  upd();
+})();
 function goFull(){try{const el=document.documentElement;(el.requestFullscreen?el.requestFullscreen({navigationUI:'hide'}):Promise.reject()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{})}catch(e){}}
-function leaveFull(){try{if(document.fullscreenElement)document.exitFullscreen();screen.orientation&&screen.orientation.unlock&&screen.orientation.unlock()}catch(e){}}
+var FSPREF=false;
+function leaveFull(){try{if(FSPREF)return;if(document.fullscreenElement)document.exitFullscreen();screen.orientation&&screen.orientation.unlock&&screen.orientation.unlock()}catch(e){}}
 $('edit').onclick=()=>$('editor').classList.remove('hidden');
 $('done').onclick=()=>$('editor').classList.add('hidden');
 $('start').onclick=async()=>{
