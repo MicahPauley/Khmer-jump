@@ -45,10 +45,10 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 .sheet .row button{flex:0 0 auto}
 .sheet p{margin:0}
 /* game */
-#game{display:flex;flex-direction:column;padding:max(6px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));background:#0b1226;color:#fff}
+#game{display:block;padding:0;background:#0b1226;color:#fff;overflow:hidden}
 #game button{background:#1c2748;color:#fff;border-color:#34437a}
 #game button.pri{background:var(--acc);color:#1d1d1f;border-color:#b8650a}
-#pauseBtn{position:absolute;top:10px;right:10px;width:36px;height:36px;padding:0;border-radius:50%;font-size:13px;opacity:.55;line-height:1}
+#pauseBtn{position:absolute;top:calc(10px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));z-index:3;width:36px;height:36px;padding:0;border-radius:50%;font-size:13px;opacity:.55;line-height:1}
 #pausePanel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(5,8,20,.82);z-index:5}
 #pausePanel b{font-size:20px;margin-bottom:4px}
 #pausePanel button{min-width:190px}
@@ -80,11 +80,11 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 .lvcard.rec{opacity:.6;border-style:dashed;background:transparent}.lvcard.rec:hover,.lvcard.rec:focus-within{opacity:.95}
 .opts button.ok{border-color:#2ecc71!important;background:rgba(46,204,113,.35)!important}
 .opts button.bad{border-color:#e74c3c!important}
-.stage{flex:1;min-height:0;position:relative}
-#cv{width:100%;height:100%;object-fit:contain;object-position:center bottom;display:block}
-.stage .msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(10,15,30,.92);padding:12px 16px;border-radius:12px;width:max-content;max-width:92%;text-align:center;font-weight:700;font-family:"Noto Sans Khmer",system-ui,sans-serif}
+.stage{position:absolute;inset:0}
+#cv{width:100%;height:100%;object-fit:fill;display:block}
+.stage .msg{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);background:rgba(10,15,30,.92);padding:12px 16px;border-radius:12px;width:max-content;max-width:92%;text-align:center;font-weight:700;font-family:"Noto Sans Khmer",system-ui,sans-serif}
 .stage .msg:empty{display:none}
-.panel{flex:none;display:flex;gap:8px;align-items:center;justify-content:flex-start;margin-top:0;padding:5px 0 0 2%}
+.panel{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;gap:8px;align-items:center;justify-content:flex-start;padding:22px max(10px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(2%,env(safe-area-inset-left));background:linear-gradient(to bottom,rgba(8,12,30,0),rgba(8,12,30,.72) 38%)}
 .word{flex:0 0 17%;font-size:clamp(18px,4.2vh,30px);font-weight:800;line-height:1.1;min-height:0;text-align:left}
 .opts{flex:0 1 68%;display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .opts button{font-family:"Noto Sans Khmer","Khmer OS","Leelawadee UI",sans-serif;font-size:clamp(17px,3.4vw,24px);min-height:54px;padding:6px 4px}
@@ -239,7 +239,9 @@ document.querySelectorAll('#diff button').forEach(b=>b.onclick=()=>{diff=b.datas
 
 /* ===== game ===== */
 const cv=$('cv'),ctx=cv.getContext('2d');
-const W=960,H=270,GY=190,B=36,BX=150,L=330,PK=110;
+const W=960,B=36,BX=150,L=330,PK=110;let H=270,GY=190;
+function fitCanvas(){const vw=Math.max(1,innerWidth),vh=Math.max(1,innerHeight);if(vh>vw)return;H=Math.max(270,Math.min(620,Math.round(W*vh/vw)));GY=Math.round(H*.56);if(cv.height!==H)cv.height=H;if(cv.width!==W)cv.width=W}
+addEventListener('resize',fitCanvas);addEventListener('orientationchange',()=>setTimeout(fitCanvas,200));fitCanvas();
 const SPEED={easy:260,medium:360,hard:500};
 let run=[],obs=[],d=0,v=0,y=0,qi=0,mode='menu',last=0,opts=[],att=0,fail=null,flash=0,shake=0,parts=[],tPlay=0,loopGen=0,pAcc=0;
 var RACE={on:false,players:{},fin:false,win:null,round:0};
