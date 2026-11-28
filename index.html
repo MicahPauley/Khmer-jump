@@ -59,6 +59,7 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 #fillT{background:#f28c1b;color:#1d1d1f;border:2px solid #b8650a;border-radius:999px;padding:7px 16px;font-size:14px;font-weight:700}
 #storebtn{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
 .sheet h3{margin:10px 0 4px;font-size:15px}.sc{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin-bottom:6px}.sc .lvt{flex:1;min-width:0}.sc button{flex:none;padding:8px 12px}.wgrid{display:flex;flex-wrap:wrap;gap:8px}.wbtn{padding:2px;border-radius:12px;line-height:0;position:relative}.wbtn.lk{opacity:.45}.wbtn.x::after{content:'';position:absolute;left:8%;right:8%;top:50%;height:3px;border-radius:2px;background:var(--fg);transform:rotate(-38deg)}.wbtn .lbl.got{color:#1f9d55}.wbtn .lbl{position:absolute;left:0;right:0;bottom:2px;font:700 10px/1 system-ui,sans-serif;color:var(--fg);text-align:center;background:rgba(255,255,255,.7);border-radius:6px;margin:0 3px}.wbtn.sel{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}.stcv{width:56px;height:56px}#stprev .stcv{width:110px;height:110px}
+#lvverse{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
 #lvbtn{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
 #curlv{color:#fff;opacity:.9;font-size:14px;margin:0}
 #curlv:empty{display:none}
@@ -116,6 +117,7 @@ body.noipa .ip{display:none}
     <button class="pri" id="start">▶ PLAY</button>
     <p id="curlv"></p>
     <div class="row2"><button id="edit">✎ My words</button><button id="lvbtn">★ Levels</button><button id="storebtn">🏅 Accolades</button></div>
+    <button id="lvverse">📖 Verses</button>
     <button id="mpbtn" class="hidden">👥 Multiplayer</button>
     <p id="sync">…</p>
     <p id="audst"></p>
@@ -161,7 +163,7 @@ body.noipa .ip{display:none}
   <p class="hint" id="lvrmsg"></p>
   <div class="lvlist" id="lvlist"></div>
   <p class="hint" id="lvempty">No levels yet. Tap “New level”, enter your words, then “Save as level”.</p>
-  <div class="row"><button class="pri" id="lvnew">＋ New level</button><button id="lvverse">📖 Verses</button><button id="lvrand">🎲 Random 20 words</button><button id="lvdone" style="margin-left:auto">Close</button></div>
+  <div class="row"><button class="pri" id="lvnew">＋ New level</button><button id="lvrand">🎲 Random 20 words</button><button id="lvdone" style="margin-left:auto">Close</button></div>
 </div>
 
 <div id="verses" class="sheet hidden" style="overflow:auto">
