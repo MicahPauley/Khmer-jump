@@ -184,6 +184,13 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
   <div class="lvlist" id="vrecs" style="flex:none;overflow:visible"></div>
   <div class="row"><button id="vreroll">🎲 New suggestions</button><button id="vclose" style="margin-left:auto">Close</button></div>
 </div>
+<div id="vread" class="sheet hidden" style="overflow:auto">
+  <h2 id="vrref"></h2>
+  <p id="vrtext" style="font-size:24px;line-height:2;margin:8px 0 14px"></p>
+  <p class="hint" id="vrinfo"></p>
+  <p class="hint">Read it through first, then press Play to memorize it word by word.</p>
+  <div class="row"><button class="pri" id="vrplay">▶ Play</button><button id="vrback" style="margin-left:auto">Back</button></div>
+</div>
 
 <div id="mp" class="sheet hidden">
   <h2>👥 Multiplayer · Live race</h2>
@@ -1382,7 +1389,7 @@ function vRender(){
     const c=document.createElement('div');c.className='sc';const t=document.createElement('div');t.className='lvt';
     const b=document.createElement('b');b.textContent=v.ref;const sp=document.createElement('span');sp.className='hint';sp.textContent=vWords(v.text).length+' words · '+(v.prog|0)+'% through'+(v.done?' · ✓ memorized ×'+v.done:'');sp.style.fontFamily='"Noto Sans Khmer",system-ui,sans-serif';
     t.append(b,document.createElement('br'),sp);
-    const pl=lvBtn('▶','pri');pl.onclick=()=>playVerse(v);const del=lvBtn('🗑');del.onclick=()=>{if(del.dataset.s){VL=VL.filter(x=>x.id!==v.id);vSaveAll();vRender();vRecRender()}else{del.dataset.s=1;del.textContent='Sure?';setTimeout(()=>{del.dataset.s='';del.textContent='🗑'},2500)}};
+    const pl=lvBtn('▶','pri');pl.onclick=()=>openVerse(v);t.style.cursor='pointer';t.onclick=()=>openVerse(v);const del=lvBtn('🗑');del.onclick=()=>{if(del.dataset.s){VL=VL.filter(x=>x.id!==v.id);vSaveAll();vRender();vRecRender()}else{del.dataset.s=1;del.textContent='Sure?';setTimeout(()=>{del.dataset.s='';del.textContent='🗑'},2500)}};
     const pb=document.createElement('div');pb.className='pbar';pb.style.cssText='margin-top:5px;height:7px';const pf=document.createElement('i');pf.style.width=(v.prog|0)+'%';pb.appendChild(pf);t.appendChild(pb);
     c.append(t,pl,del);box.appendChild(c);
   }
@@ -1395,15 +1402,22 @@ function vRecRender(){
     const b=document.createElement('b');b.textContent=r[0];const sp=document.createElement('span');sp.className='hint';sp.textContent=r[1].length>70?r[1].slice(0,68)+'…':r[1];sp.style.fontFamily='"Noto Sans Khmer",system-ui,sans-serif';
     t.append(b,document.createElement('br'),sp);
     const add=lvBtn('Save');add.onclick=()=>{vAdd(r[0],r[1]);VRECS=VRECS.filter(x=>x!==r);vRender();vRecRender()};
-    const pl=lvBtn('▶ Play','pri');pl.onclick=()=>{const v=vAdd(r[0],r[1]);VRECS=VRECS.filter(x=>x!==r);playVerse(v)};
+    const pl=lvBtn('Read','pri');pl.onclick=()=>{const v=vAdd(r[0],r[1]);VRECS=VRECS.filter(x=>x!==r);vRender();vRecRender();openVerse(v)};
     c.append(t,add,pl);box.appendChild(c);
   }
 }
 function vAdd(ref,text){let v=VL.find(x=>x.ref.toLowerCase()===ref.toLowerCase()&&x.text===text);if(!v){v={id:'v'+Date.now()+Math.floor(Math.random()*99),ref,text};VL.push(v);vSaveAll()}return v}
+function openVerse(v){
+  $('vrref').textContent=v.ref;const t=$('vrtext');t.textContent=String(v.text).replace(/\s+/g,' ').trim();t.style.fontFamily=KFONT;
+  $('vrinfo').textContent=vWords(v.text).length+' words · '+(v.prog|0)+'% through'+(v.done?' · ✓ memorized ×'+v.done:'');
+  $('vrplay').onclick=()=>{$('vread').classList.add('hidden');playVerse(v)};
+  $('vread').classList.remove('hidden');
+}
+$('vrback').onclick=()=>$('vread').classList.add('hidden');
 function playVerse(v){
   VS.on=true;VS.id=v.id;VS.ref=v.ref;VS.items=vChunks(v.text).map(c=>({en:v.ref,km:c}));VS.nwords=vWords(v.text).length;VS.trail=[];curLv=null;
   if(VS.items.length<2){VS.on=false;$('vmsg').textContent='That verse is too short to play.';return}
-  goFull();$('verses').classList.add('hidden');$('levels').classList.add('hidden');$('menu').classList.add('hidden');$('game').classList.remove('hidden');play(true);att=0;begin();
+  goFull();$('vread').classList.add('hidden');$('verses').classList.add('hidden');$('levels').classList.add('hidden');$('menu').classList.add('hidden');$('game').classList.remove('hidden');play(true);att=0;begin();
 }
 function vWin(){
   mode='dead';fail='';$('q').textContent='🎉 '+VS.ref;$('opts').innerHTML='';
