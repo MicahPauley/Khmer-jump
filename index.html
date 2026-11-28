@@ -59,6 +59,8 @@ button.pri{background:var(--acc);border-color:#b8650a;color:#1d1d1f;font-weight:
 #fillT{background:#f28c1b;color:#1d1d1f;border:2px solid #b8650a;border-radius:999px;padding:7px 16px;font-size:14px;font-weight:700}
 #storebtn{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
 .sheet h3{margin:10px 0 4px;font-size:15px}.sc{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin-bottom:6px}.sc .lvt{flex:1;min-width:0}.sc button{flex:none;padding:8px 12px}.wgrid{display:flex;flex-wrap:wrap;gap:8px}.wbtn{padding:2px;border-radius:12px;line-height:0;position:relative}.wbtn.lk{opacity:.45}.wbtn.x::after{content:'';position:absolute;left:8%;right:8%;top:50%;height:3px;border-radius:2px;background:var(--fg);transform:rotate(-38deg)}.wbtn .lbl.got{color:#1f9d55}.wbtn .lbl{position:absolute;left:0;right:0;bottom:2px;font:700 10px/1 system-ui,sans-serif;color:var(--fg);text-align:center;background:rgba(255,255,255,.7);border-radius:6px;margin:0 3px}.wbtn.sel{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}.stcv{width:56px;height:56px}#stprev .stcv{width:110px;height:110px}
+  .vw{display:inline-block;padding:0 5px;margin:1px 2px;border-radius:9px;cursor:pointer}.vw.on{background:#ffe08a;box-shadow:0 0 0 2px #e8a400}.vw.sel{outline:2px solid #1d1d1f}
+#opts button small.gl{display:block;font-size:11px;font-weight:500;opacity:.85;font-family:system-ui,sans-serif;margin-top:2px}
 #lvverse{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
 #lvbtn{background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 16px;font-size:14px}
 #curlv{color:#fff;opacity:.9;font-size:14px;margin:0}
@@ -187,8 +189,13 @@ body.noipa .ip,body.noipa .opts button small.ip{display:none!important}
 <div id="vread" class="sheet hidden" style="overflow:auto">
   <h2 id="vrref"></h2>
   <p id="vrtext" style="font-size:24px;line-height:2;margin:8px 0 14px"></p>
+  <div id="vwpanel" class="hidden" style="background:#fff7dd;border:2px solid #e8a400;border-radius:14px;padding:10px 12px;margin-bottom:10px">
+    <div style="font-size:22px;font-weight:700" id="vwword"></div>
+    <input id="vwen" placeholder="English meaning (optional)" style="width:100%;margin:6px 0">
+    <div class="row"><button class="pri" id="vwsave">Mark as unknown</button><button id="vwrm">I know it</button></div>
+  </div>
   <p class="hint" id="vrinfo"></p>
-  <p class="hint">Read it through first, then press Play to memorize it word by word.</p>
+  <p class="hint">Read it through first. Tap any word you don't know yet to highlight it and add its English. While you play, that English shows under the choices. Then press Play.</p>
   <div class="row"><button class="pri" id="vrplay">▶ Play</button><button id="vrback" style="margin-left:auto">Back</button></div>
 </div>
 
@@ -1412,15 +1419,36 @@ function vRecRender(){
   }
 }
 function vAdd(ref,text){let v=VL.find(x=>x.ref.toLowerCase()===ref.toLowerCase()&&x.text===text);if(!v){v={id:'v'+Date.now()+Math.floor(Math.random()*99),ref,text};VL.push(v);vSaveAll()}return v}
+function vKey(w){return String(w).replace(/[\u200b។៕,.;:!?“”‘’"'()\s]/g,'')}
+function vLookup(k){
+  try{const srcs=LV.map(l=>l.text||'');srcs.push($('words').value||'');
+    for(const t of srcs)for(const e of parseText(t)){if(e.km&&vKey(e.km)===k&&e.en)return e.en}}catch(e){}
+  return '';
+}
+function vGloss(c){const cs=String(c).replace(/\u200b/g,''),out=[];for(const k in (VS.unk||{})){if(VS.unk[k]&&cs.indexOf(k)>=0)out.push(k+' = '+VS.unk[k])}return out.join(' · ')}
 function openVerse(v){
-  $('vrref').textContent=v.ref;const t=$('vrtext');t.textContent=String(v.text).replace(/\s+/g,' ').trim();t.style.fontFamily=KFONT;
-  $('vrinfo').textContent=vWords(v.text).length+' words · '+(v.prog|0)+'% through'+(v.done?' · ✓ memorized ×'+v.done:'');
+  $('vrref').textContent=v.ref;const t=$('vrtext');t.textContent='';t.style.fontFamily=KFONT;$('vwpanel').classList.add('hidden');
+  v.unk=v.unk||{};
+  const draw=()=>{
+    t.textContent='';
+    for(const w of vWords(v.text)){const k=vKey(w);if(!k)continue;const sp=document.createElement('span');sp.className='vw'+(k in v.unk?' on':'');sp.textContent=w.replace(/\u200b/g,'');
+      sp.onclick=()=>{
+        t.querySelectorAll('.vw.sel').forEach(x=>x.classList.remove('sel'));sp.classList.add('sel');
+        $('vwword').textContent=k;$('vwen').value=(k in v.unk&&v.unk[k])?v.unk[k]:vLookup(k);$('vwrm').classList.toggle('hidden',!(k in v.unk));$('vwpanel').classList.remove('hidden');
+        $('vwsave').textContent=(k in v.unk)?'Save':'Mark as unknown';
+        $('vwsave').onclick=()=>{v.unk[k]=$('vwen').value.trim();vSaveAll();$('vwpanel').classList.add('hidden');draw()};
+        $('vwrm').onclick=()=>{delete v.unk[k];vSaveAll();$('vwpanel').classList.add('hidden');draw()};
+      };
+      t.appendChild(sp);t.appendChild(document.createTextNode(' '));}
+    $('vrinfo').textContent=vWords(v.text).length+' words · '+Object.keys(v.unk).length+' marked as unknown · '+(v.prog|0)+'% through'+(v.done?' · ✓ memorized ×'+v.done:'');
+  };
+  draw();
   $('vrplay').onclick=()=>{$('vread').classList.add('hidden');playVerse(v)};
   $('vread').classList.remove('hidden');
 }
 $('vrback').onclick=()=>$('vread').classList.add('hidden');
 function playVerse(v){
-  VS.on=true;VS.id=v.id;VS.ref=v.ref;VS.items=vChunks(v.text).map(c=>({en:v.ref,km:c}));VS.nwords=vWords(v.text).length;VS.trail=[];curLv=null;
+  VS.on=true;VS.id=v.id;VS.unk=v.unk||{};VS.ref=v.ref;VS.items=vChunks(v.text).map(c=>({en:v.ref,km:c}));VS.nwords=vWords(v.text).length;VS.trail=[];curLv=null;
   if(VS.items.length<2){VS.on=false;$('vmsg').textContent='That verse is too short to play.';return}
   goFull();$('vread').classList.add('hidden');$('verses').classList.add('hidden');$('levels').classList.add('hidden');$('menu').classList.add('hidden');$('game').classList.remove('hidden');play(true);att=0;begin();
 }
@@ -1439,7 +1467,7 @@ function vSetQ(i){
   opts=shuffle([w.km,pool[Math.floor(Math.random()*Math.min(4,pool.length))]]);
   $('q').textContent=VS.ref;
   const o=$('opts');o.innerHTML='';
-  opts.forEach((k,n)=>{const b=document.createElement('button');b.textContent=k;b.onclick=()=>pick(n);o.appendChild(b)});
+  opts.forEach((k,n)=>{const b=document.createElement('button');b.textContent=k.replace(/\u200b/g,'');{const g=vGloss(k);if(g){const sm=document.createElement('small');sm.className='gl';sm.textContent=g;b.appendChild(sm)}}b.onclick=()=>pick(n);o.appendChild(b)});
 }
 $('lvverse').onclick=()=>{VRECS=[];vReroll();$('vmsg').textContent='';vRender();vRecRender();$('verses').classList.remove('hidden')};
 $('vclose').onclick=()=>$('verses').classList.add('hidden');
