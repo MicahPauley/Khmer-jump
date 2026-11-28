@@ -185,13 +185,15 @@ body.noipa .ip{display:none}
   <div id="mpHome">
     <p class="hint">Race up to 4 players on the same level at the same time. Everyone needs to be signed in. The first to the finish wins.</p>
     <div class="row" style="margin:12px 0"><button class="pri" id="mpHost">Host a race</button></div>
+    <p class="hint">Or race to finish a Bible verse in order — everyone gets the same verse:</p>
+    <div class="row" style="margin:6px 0 12px"><button class="pri" id="mpHostV">📖 Host a verse race</button></div>
     <p class="hint">Or join a friend’s race with their 4-letter code:</p>
     <div class="row" style="margin-top:6px"><input id="mpCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" style="text-transform:uppercase;letter-spacing:6px;text-align:center;font-weight:800;max-width:160px"><button id="mpJoin">Join</button></div>
     <div class="row" style="margin-top:10px"><button class="pri hidden" id="mpSign">Sign in with Google to join</button></div>
     <div class="row" style="margin-top:14px"><button id="mpBack">Close</button></div>
   </div>
   <div id="mpPick" class="hidden" style="flex:1;min-height:0;display:flex;flex-direction:column;gap:8px">
-    <p class="hint">Choose the speed and the level for this race:</p>
+    <p class="hint" id="mpPickHint">Choose the speed and the level for this race:</p>
     <div class="row" id="mpDiff"><button class="mpd" data-d="easy">Easy</button><button class="mpd" data-d="medium">Medium</button><button class="mpd" data-d="hard">Hard</button></div>
     <div class="lvlist" id="mpLv"></div>
     <p class="hint hidden" id="mpNoLv">You have no saved levels yet. Save one under ★ Levels first.</p>
@@ -984,7 +986,7 @@ function msgBtn(text,label,fn){
   const mb=document.createElement('button');mb.style.padding='8px 14px';mb.style.marginLeft='8px';mb.textContent='🏠 Menu';mb.onclick=()=>$('menuBtn').onclick();m.appendChild(mb);
 }
 function begin(){
-  VS.trail=[];VS.pq=-1;run=RACE.on?seededShuffle(RACE.items,RACE.seed):VS.on?VS.items.slice():shuffle(parse().filter(x=>x.en&&x.km));v=SPEED[RACE.on?RACE.diff:diff];LAY.seed=layoutSeed();TH=THEMES[hashStr('th'+LAY.seed)%THEMES.length];obs=plan(run.length);cam=camT=0;petD=-60;petY=0;
+  VS.trail=[];VS.pq=-1;run=RACE.on?(VS.on?RACE.items.slice():seededShuffle(RACE.items,RACE.seed)):VS.on?VS.items.slice():shuffle(parse().filter(x=>x.en&&x.km));v=SPEED[RACE.on?RACE.diff:diff];LAY.seed=layoutSeed();TH=THEMES[hashStr('th'+LAY.seed)%THEMES.length];obs=plan(run.length);cam=camT=0;petD=-60;petY=0;
   d=0;y=0;air=false;fell=false;rot=0;jumpReq=0;coy=0;parts=[];flash=0;shake=0;att++;tPlay=0;fail=null;pAcc=0;mode='play';
   $('msg').textContent='';$('msg').className='msg';$('pausePanel').classList.add('hidden');
   setQ(0);last=performance.now();const g=++loopGen;requestAnimationFrame(t=>loop(t,g));
@@ -1262,7 +1264,7 @@ function draw(){
   }
   if(RACE.on&&run.length&&obs.length)raceHud();
   if(RACE.conf&&RACE.conf.length){for(const c of RACE.conf){ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.r);ctx.fillStyle=c.c;ctx.fillRect(-c.w/2,-c.h/2,c.w,c.h);ctx.restore()}}
-  if(VS.on&&run.length&&mode!=='dead'){ctx.save();ctx.textAlign='center';let fs=22;ctx.font='600 '+fs+'px '+KFONT;const txt=(VS.trail.length?VS.trail.join('  ')+'  ':'')+'＿＿＿';while(ctx.measureText(txt).width>W-300&&fs>12){fs--;ctx.font='600 '+fs+'px '+KFONT}ctx.globalAlpha=.6;ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=4;ctx.fillText(txt,W/2,64);ctx.restore()}
+  if(VS.on&&run.length&&mode!=='dead'){ctx.save();ctx.textAlign='center';let fs=22;ctx.font='600 '+fs+'px '+KFONT;const txt=(VS.trail.length?VS.trail.join('  ')+'  ':'')+'＿＿＿';while(ctx.measureText(txt).width>W-300&&fs>12){fs--;ctx.font='600 '+fs+'px '+KFONT}ctx.globalAlpha=.6;ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=4;ctx.fillText(txt,W/2,RACE.on?112:64);ctx.restore()}
   if(flash>.01){ctx.fillStyle='rgba(120,230,150,'+flash+')';ctx.fillRect(0,0,W,H)}
   ctx.restore();
 }
@@ -1854,7 +1856,7 @@ function mpPickRender(){
   $('mpNoLv').classList.toggle('hidden',n>0);
   document.querySelectorAll('#mpDiff button').forEach(b=>b.classList.toggle('sel',b.dataset.d===MP.diff));
 }
-async function mpCreate(l,items){
+async function mpCreate(l,items,txt){
   if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}
   mpMsg('Creating your room…');
   const me=FB.uid();let code='';
@@ -1865,7 +1867,7 @@ async function mpCreate(l,items){
       code=c;
     }
     if(!code){mpMsg('Could not find a free code. Try again.');return}
-    const meta={host:me,created:Date.now(),state:'lobby',round:0,text:items.map(x=>x.en+' = '+x.km).join('\n'),lname:l.name,n:items.length,diff:MP.diff,seed:0};
+    const meta={host:me,created:Date.now(),state:'lobby',round:0,text:txt||items.map(x=>x.en+' = '+x.km).join('\n'),lname:l.name,n:l.n||items.length,diff:MP.diff,seed:0};
     await FB.roomSet(code,'meta',meta);
     await FB.roomSet(code,'players/'+me,myInfo());
   }catch(e){mpMsg('Could not create the room ('+(e&&e.code||'error')+'). If this keeps happening, the database rules may still need updating.');return}
@@ -1945,7 +1947,9 @@ async function mpStart(){
 async function mpStartRace(m){
   VS.on=false;
   const R=RACE;R.on=true;R.code=MP.code;R.round=m.round|0;R.seed=m.seed|0;R.diff=m.diff||'medium';R.fin=false;R.spec=false;R.over=false;R.celeb=false;R.conf=[];R.win=null;R.sig='';R.lt=0;R.note='';$('msg').className='msg';
-  R.items=parseText(m.text).filter(x=>x.en&&x.km);R.prevLv=curLv;curLv=null;
+  if(typeof m.text==='string'&&m.text.indexOf('##verse##\n')===0){const pr=m.text.split('\n'),ref=pr[1]||'Verse',vt=pr.slice(2).join('\n');VS.on=true;VS.ref=ref;VS.items=vChunks(vt).map(c=>({en:ref,km:c}));VS.nwords=vWords(vt).length;R.items=VS.items}
+  else{VS.on=false;R.items=parseText(m.text).filter(x=>x.en&&x.km)}
+  R.prevLv=curLv;curLv=null;
   $('mp').classList.add('hidden');$('menu').classList.add('hidden');goFull();
   try{await loadIpa()}catch(e){}
   if(!R.on||R.round!==(m.round|0))return;
@@ -1965,7 +1969,7 @@ function raceTick(force){
   try{FB.roomUpdate(RACE.code,'players/'+FB.uid(),{d:Math.round(d),y:Math.round(y),q:qi,x:mode==='dead'?1:0,a:att}).catch(()=>{})}catch(e){}
 }
 function raceWin(){
-  mode='spec';RACE.spec=true;RACE.conf=[];fail='';reviewWords(run);learnWords(run);
+  mode='spec';RACE.spec=true;RACE.conf=[];fail='';if(VS.on){S.vmem=(S.vmem|0)+VS.nwords;saveStore()}else{reviewWords(run);learnWords(run)}
   $('q').textContent='🏁 Finished!';$('opts').innerHTML='';
   RACE.fin=true;RACE.sig='';
   const me=FB.uid(),ms=Date.now()-RACE.t0;
@@ -2089,7 +2093,20 @@ function raceHud(){
 }
 $('mpbtn').onclick=mpOpen;
 $('mpBack').onclick=()=>{if(MP.code)mpLeave();$('mp').classList.add('hidden');$('menu').classList.remove('hidden')};
-$('mpHost').onclick=()=>{if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}mpMsg('');MP.diff=diff;mpPickRender();mpView('mpPick')};
+$('mpHost').onclick=()=>{if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}mpMsg('');MP.diff=diff;MP.vm=false;$('mpPickHint').textContent='Choose the speed and the level for this race:';mpPickRender();mpView('mpPick')};
+$('mpHostV').onclick=()=>{if(!window.FB||!FB.uid()){mpMsg('Sign in first.');return}mpMsg('');MP.diff=diff;MP.vm=true;$('mpPickHint').textContent='Choose the speed and the verse for this race (save verses under 📖 Verses):';mpVerseRender();mpView('mpPick')};
+function mpVerseRender(){
+  const box=$('mpLv');box.textContent='';let n=0;
+  for(const v of VL){
+    const ch=vChunks(v.text);if(ch.length<3)continue;n++;
+    const c=document.createElement('div');c.className='lvcard';const t=document.createElement('div');t.className='lvt';
+    const nm=document.createElement('b');nm.textContent='📖 '+v.ref;const sub=document.createElement('span');sub.className='hint';sub.textContent=vWords(v.text).length+' words';
+    t.append(nm,document.createElement('br'),sub);
+    const b=lvBtn('Host this','pri');b.onclick=()=>mpCreate({name:v.ref,n:ch.length},[],'##verse##\n'+v.ref+'\n'+v.text);
+    c.append(t,b);box.appendChild(c);
+  }
+  $('mpNoLv').classList.toggle('hidden',n>0);$('mpNoLv').textContent='You have no saved verses yet. Save one under 📖 Verses on the title screen first.';
+}
 $('mpPickBack').onclick=()=>{mpMsg('');mpView('mpHome')};
 $('mpJoin').onclick=mpJoin;
 $('mpCode').addEventListener('keydown',e=>{if(e.key==='Enter')mpJoin()});
